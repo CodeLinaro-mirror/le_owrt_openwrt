@@ -661,6 +661,7 @@ define Package/iptables-zz-legacy/install
 	$(INSTALL_DIR) $(1)/usr/sbin
 	$(CP) $(PKG_INSTALL_DIR)/usr/sbin/iptables-legacy{,-restore,-save} $(1)/usr/sbin/
 	$(INSTALL_DIR) $(1)/usr/lib/iptables
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/iptables/libipt_TRIGGER.so $(1)/usr/lib/iptables
 endef
 
 define Package/xtables-nft/install

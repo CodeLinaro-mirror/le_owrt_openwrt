@@ -8,12 +8,12 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=iproute2
-PKG_VERSION:=5.15.0
+PKG_VERSION:=6.2.0
 PKG_RELEASE:=$(AUTORELEASE)
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
 PKG_SOURCE_URL:=@KERNEL/linux/utils/net/iproute2
-PKG_HASH:=38e3e4a5f9a7f5575c015027a10df097c149111eeb739993128e5b2b35b291ff
+PKG_HASH:=4d72730200ec5b2aabaa1a2f20553c6748292f065d9a154c7d5e22559df9fd62
 PKG_BUILD_PARALLEL:=1
 PKG_BUILD_DEPENDS:=iptables
 PKG_LICENSE:=GPL-2.0
@@ -35,7 +35,6 @@ define Package/ip-tiny
 $(call Package/iproute2/Default)
   TITLE:=Routing control utility (minimal)
   VARIANT:=iptiny
-  DEFAULT_VARIANT:=1
   PROVIDES:=ip
   ALTERNATIVES:=200:/sbin/ip:/usr/libexec/ip-tiny
   DEPENDS:=+libnl-tiny +(PACKAGE_devlink||PACKAGE_rdma):libmnl
@@ -45,6 +44,7 @@ define Package/ip-full
 $(call Package/iproute2/Default)
   TITLE:=Routing control utility (full)
   VARIANT:=ipfull
+  DEFAULT_VARIANT:=1
   PROVIDES:=ip
   ALTERNATIVES:=300:/sbin/ip:/usr/libexec/ip-full
   DEPENDS:=+libnl-tiny +libbpf +(PACKAGE_devlink||PACKAGE_rdma):libmnl

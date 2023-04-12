@@ -141,6 +141,11 @@ wifi_updown() {
 	_wifi_updown "$@"
 }
 
+wifi_recover() {
+	_wifi_updown disable_recover "$1"
+	_wifi_updown enable_recover "$1"
+}
+
 wifi_reload_legacy() {
 	_wifi_updown "disable" "$1"
 	scan_wifi
@@ -247,6 +252,7 @@ case "$1" in
 	status) ubus_wifi_cmd "status" "$2";;
 	reload) wifi_reload "$2";;
 	reload_legacy) wifi_reload_legacy "$2";;
+	recover) wifi_recover "$2";;
 	multi_up|\
 	multi_down) ubus call network reload; multi_radio_wifi_updown "$@";;
 	--help|help) usage;;

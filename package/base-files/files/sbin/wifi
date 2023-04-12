@@ -157,6 +157,11 @@ wifi_updown() {
 	_wifi_updown "$@"
 }
 
+wifi_recover() {
+	_wifi_updown disable_recover "$1"
+	_wifi_updown enable_recover "$1"
+}
+
 wifi_reload_legacy() {
 	_wifi_updown "disable" "$1"
 	scan_wifi
@@ -264,6 +269,7 @@ case "$1" in
 	isup) wifi_isup "$2"; exit $?;;
 	reload) wifi_reload "$2";;
 	reload_legacy) wifi_reload_legacy "$2";;
+	recover) wifi_recover "$2";;
 	--help|help) usage;;
 	reconf) wifi_updown "reconf" "$2";;
 	''|up) wifi_updown "enable" "$2";;

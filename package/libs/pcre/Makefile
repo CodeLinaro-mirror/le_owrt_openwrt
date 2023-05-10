@@ -70,6 +70,7 @@ HOST_CONFIGURE_ARGS += \
 	--enable-cpp
 
 TARGET_CFLAGS += $(FPIC)
+HOST_CFLAGS += $(FPIC)
 
 CONFIGURE_ARGS += \
 	--enable-utf8 \

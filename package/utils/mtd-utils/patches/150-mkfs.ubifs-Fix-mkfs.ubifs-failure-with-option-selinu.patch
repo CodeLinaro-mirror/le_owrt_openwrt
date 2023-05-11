@@ -1,0 +1,37 @@
+From 44d88789e2dfae015300afbe854ba92baa554146 Mon Sep 17 00:00:00 2001
+From: Zijun Hu <quic_zijuhu@quicinc.com>
+Date: Thu, 11 May 2023 16:38:52 +0800
+Subject: [PATCH] mkfs.ubifs: Fix mkfs.ubifs failure with option selinux
+
+Below failure happens when mkfs.ubifs --selinux=FILE ...
+"Error: bad file context FILE 1"
+"No such file or directory (error 2)"
+
+It is fixed by this change.
+
+Change-Id: I28f9be756cfaf43f27519170219448e2da351166
+---
+ ubifs-utils/mkfs.ubifs/mkfs.ubifs.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/ubifs-utils/mkfs.ubifs/mkfs.ubifs.c b/ubifs-utils/mkfs.ubifs/mkfs.ubifs.c
+index 8211adab70cc..15e6bdc1f30a 100644
+--- a/ubifs-utils/mkfs.ubifs/mkfs.ubifs.c
++++ b/ubifs-utils/mkfs.ubifs/mkfs.ubifs.c
+@@ -730,12 +730,13 @@ static int get_options(int argc, char**argv)
+ 			free(context);
+ 			context_len = strlen(optarg);
+ 			context = (char *) xmalloc(context_len + 1);
+ 			if (!context)
+ 				return err_msg("xmalloc failed\n");
+ 			memcpy(context, optarg, context_len);
++			context[context_len] = '\0';
+ 
+ 			/* Make sure root directory exists */
+ 			if (stat(context, &context_st))
+ 				return sys_err_msg("bad file context %s\n",
+ 								   context);
+ 			break;
+-- 
+2.7.4
+

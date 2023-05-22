@@ -1227,6 +1227,7 @@ start_service() {
 	local instance_found=0
 	local first_instance=""
 
+        mkdir -p /tmp/data
 	. /lib/functions/network.sh
 
 	config_cb() {

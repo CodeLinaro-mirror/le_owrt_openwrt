@@ -136,7 +136,7 @@ setup_interface () {
 		else
 			for prefix in $PREFIXES $ADDRESSES; do
 				local paddr="${prefix%%,*}"
-				proto_add_ipv6_route "$addr" "$mask" "$gw" "$metric" "$valid" "$paddr"
+				proto_add_ipv6_route "$addr" "$mask" "$gw" "$metric" "$valid" #"$paddr"
 			done
 		fi
 	done

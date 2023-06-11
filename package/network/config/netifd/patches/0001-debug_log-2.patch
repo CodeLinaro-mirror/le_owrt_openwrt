@@ -1,0 +1,44 @@
+From e69cd703cb244cf969077c22b34ddef9db887341 Mon Sep 17 00:00:00 2001
+From: Dheeraj Kumar<quic_dhekum@quicinc.com>
+Date: Mon, 15 May 2023 15:34:15 +0530
+Subject: [PATCH] debug_log-2
+Signed-off-by: Dheeraj Kumar<quic_dhekum@quicinc.com>
+---
+ netifd.h | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/netifd.h b/netifd.h
+index 9645a0a..d8268fa 100644
+--- a/netifd.h
++++ b/netifd.h
+@@ -67,6 +67,8 @@ enum {
+ 	DEBUG_WIRELESS	= 3,
+ };
+ 
++void netifd_log_message(int priority, const char *format, ...);
++
+ #ifdef DEBUG
+ #define DPRINTF(format, ...) fprintf(stderr, "%s(%d): " format, __func__, __LINE__, ## __VA_ARGS__)
+ #define D(level, format, ...) do { \
+@@ -74,8 +76,8 @@ enum {
+ 				DPRINTF(format, ##__VA_ARGS__); \
+ 	} while (0)
+ #else
+-#define DPRINTF(format, ...) no_debug(0, format, ## __VA_ARGS__)
+-#define D(level, format, ...) no_debug(DEBUG_ ## level, format, ## __VA_ARGS__)
++#define DPRINTF(format, ...) netifd_log_message(0, format, ## __VA_ARGS__)
++#define D(level, format, ...) netifd_log_message(DEBUG_ ## level, format, ## __VA_ARGS__)
+ #endif
+ 
+ #define LOG_BUF_SIZE	256
+@@ -95,7 +97,6 @@ struct netifd_process {
+ 	bool log_overflow;
+ };
+ 
+-void netifd_log_message(int priority, const char *format, ...);
+ 
+ int netifd_start_process(const char **argv, char **env, struct netifd_process *proc);
+ void netifd_kill_process(struct netifd_process *proc);
+-- 
+2.17.1
+

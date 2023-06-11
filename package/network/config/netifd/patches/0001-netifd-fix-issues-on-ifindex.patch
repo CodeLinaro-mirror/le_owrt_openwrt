@@ -1,0 +1,104 @@
+From 9b20ac989883982ba9224627894888d73b0b84e5 Mon Sep 17 00:00:00 2001
+From: HuaWen CHEN <quic_huawenc@quicinc.com>
+Date: Mon, 23 Jan 2023 10:47:41 +0800
+Subject: [PATCH] netifd: fix issues on ifindex
+
+ifindex issue:
+1. after wlan device down and up, the ifindex may change
+   but netifd init the ifindex value only once.
+   now, set ifindex again whenever get DEV_EVENT_ADD event
+2. after netifd get RTM_NEWLINK,
+   it query ifindex but got 0 due race-condition.
+   now, renew ifindex when found the ifindex is 0
+
+Signed-off-by:quic_huawenc@quicinc.com
+---
+ bridge.c       | 16 ++++++++++++++++
+ device.c       | 15 +++++++++++++++
+ system-linux.c | 11 +++++++++--
+ 3 files changed, 40 insertions(+), 2 deletions(-)
+
+diff --git a/bridge.c b/bridge.c
+index 7e61b9d..a058092 100644
+--- a/bridge.c
++++ b/bridge.c
+@@ -575,6 +575,22 @@ bridge_member_cb(struct device_user *dep, enum device_event ev)
+ 	case DEV_EVENT_AUTH_UP:
+ 		if (!bst->dev.active)
+ 			break;
++		//the device ifindex maybe change when wlan down and then up
++		//netifd now set ifindex only once, here to re-fresh the ifindex, otherwise bridge addif will failure
++		device_set_ifindex(dev, system_if_resolve(dev));
++
++		//netifd may get RTM_NETLINK before ifindex is generated,
++		//if the ifindex not ready, here we wait a few time to refresh the ifindex
++		if(dev->ifindex == 0) {
++			int try_number=0;
++			retry:
++				D(SYSTEM, "bridge_member_cb: sleep 50ms to wait %s.ifindex ready\n", bm->dev.dev->ifname);
++				usleep(50*100);
++				device_set_ifindex(dev, system_if_resolve(dev));
++				try_number++;
++				if(try_number <=2 && dev->ifindex == 0)
++					goto retry;
++		}
+ 
+ 		if (bridge_enable_member(bm))
+ 			break;
+diff --git a/device.c b/device.c
+index b3d0e85..569889d 100644
+--- a/device.c
++++ b/device.c
+@@ -141,10 +141,25 @@ void device_stp_init(void)
+ 
+ static int set_device_state(struct device *dev, bool state)
+ {
++	D(DEVICE, "set_device_state: [%s]%d\n", dev->ifname, state);
+ 	if (state) {
+ 		/* Get ifindex for all devices being enabled so a valid  */
+ 		/* ifindex is in place avoiding possible race conditions */
+ 		device_set_ifindex(dev, system_if_resolve(dev));
++
++		//netifd may get RTM_NETLINK before ifindex is generated,
++		//if the ifindex not ready, here we wait a few time to refresh the ifindex
++		if(dev->ifindex == 0) {
++			int try_number=0;
++			retry:
++				D(DEVICE, "set_device_state: sleep 50ms to wait %s.ifindex ready\n", dev->ifname);
++				usleep(50*100);
++				device_set_ifindex(dev, system_if_resolve(dev));
++				try_number++;
++				if(try_number <=4 && dev->ifindex == 0)
++					goto retry;
++		}
++
+ 		if (!dev->ifindex)
+ 			return -1;
+ 
+diff --git a/system-linux.c b/system-linux.c
+index e768853..b805e15 100644
+--- a/system-linux.c
++++ b/system-linux.c
+@@ -912,10 +912,17 @@ retry:
+ 	ret = 0;
+ 	oldbr = system_get_bridge(dev->ifname, dev_buf, sizeof(dev_buf));
+ 	if (!oldbr || strcmp(oldbr, bridge->ifname) != 0) {
++
++		//retry set-ifindex to resolve racecondition that device not get ifindex
++		if(dev->ifindex == 0) {
++			device_set_ifindex(dev, system_if_resolve(dev));
++			D(SYSTEM, "system_bridge_addif: try get ifindex(new:%d)", dev->ifindex);
++		}
++
+ 		ret = system_bridge_if(bridge->ifname, dev, SIOCBRADDIF, NULL);
+ 		tries++;
+-		D(SYSTEM, "Failed to add device '%s' to bridge '%s' (tries=%d): %s\n",
+-		  dev->ifname, bridge->ifname, tries, strerror(errno));
++		D(SYSTEM, "Failed to add device '%s'/(ifindex=%d) to bridge '%s' (tries=%d): %s\n",
++		  dev->ifname, dev->ifindex, bridge->ifname, tries, strerror(errno));
+ 		if (tries <= 3)
+ 			goto retry;
+ 	}
+-- 
+2.7.4
+

@@ -525,11 +525,17 @@ dhcp_add() {
 		DNS_SERVERS="$DNS_SERVERS $dnsserver"
 	}
 
-	append_bool "$cfg" ignore "--no-dhcp-interface=$ifname" && {
-		# Many ISP do not have useful names for DHCP customers (your WAN).
-		dhcp_this_host_add "$net" "$ifname" "$ADD_WAN_FQDN"
-		return 0
-	}
+
+	local dhcp_proxy
+	config_get dhcp_proxy "$cfg" dhcp_proxy
+
+	if [ "$dhcp_proxy" != "1" ]; then
+		append_bool "$cfg" ignore "--no-dhcp-interface=$ifname" && {
+			# Many ISP do not have useful names for DHCP customers (your WAN).
+			dhcp_this_host_add "$net" "$ifname" "$ADD_WAN_FQDN"
+			return 0
+		}
+	fi
 
 	network_get_subnet subnet "$net" || return 0
 	network_get_protocol proto "$net" || return 0
@@ -791,6 +797,13 @@ dhcp_relay_add() {
 	else
 		network_get_device ifname "$interface" || return
 		xappend "--dhcp-relay=$local_addr,$server_addr,$ifname"
+	fi
+
+	local dhcp_proxy
+	config_get dhcp_proxy "$cfg" dhcp_proxy
+
+	if [ $dhcp_proxy == 1 ]; then
+		xappend "--dhcp-proxy"
 	fi
 }
 

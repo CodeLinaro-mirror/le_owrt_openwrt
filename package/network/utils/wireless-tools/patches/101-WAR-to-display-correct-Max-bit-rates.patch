@@ -1,0 +1,21 @@
+From 62e60e6b750675dbddee940cec96e133b7ab334b Fri Jul 7 12:22:48 2023
+From: Naresh Pirati <quic_npirati@quicinc.com>
+Date: Fri, 7 Jul 2023 12:22:48 +0530
+Subject: [PATCH] owrt/openwrt: Copy wireless tools patches from fig branch
+
+Change-Id: I17a72abcd3f6984bcfa672ee4fa2368bef160345
+Signed-off-by: Naresh Pirati <quic_npirati@quicinc.com>
+
+--- a/iwlib.c
++++ b/iwlib.c
+@@ -1132,7 +1132,8 @@ iw_print_bitrate(char *	buffer,
+ 		 int	buflen,
+ 		 int	bitrate)
+ {
+-  double	rate = bitrate;
++  /* Due to overrun, driver sends in Kbps, Convert in to bps */
++  double        rate = (double) bitrate * 1000;
+   char		scale;
+   int		divisor;
+ 
+

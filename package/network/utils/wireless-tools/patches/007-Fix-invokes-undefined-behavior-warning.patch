@@ -1,0 +1,21 @@
+From 62e60e6b750675dbddee940cec96e133b7ab334b Fri Jul 7 12:22:48 2023
+From: Naresh Pirati <quic_npirati@quicinc.com>
+Date: Fri, 7 Jul 2023 12:22:48 +0530
+Subject: [PATCH] owrt/openwrt: Copy wireless tools patches from fig branch
+
+Change-Id: I17a72abcd3f6984bcfa672ee4fa2368bef160345
+Signed-off-by: Naresh Pirati <quic_npirati@quicinc.com>
+
+Index: wireless_tools.29/iwlist.c
+===================================================================
+--- wireless_tools.29.orig/iwlist.c	2017-03-13 15:05:17.268598970 +0530
++++ wireless_tools.29/iwlist.c	2017-03-13 15:08:07.652767683 +0530
+@@ -561,7 +561,7 @@
+ 	int		i;
+ 	int		n = 0;
+ 	printf("                    Modulations :");
+-	for(i = 0; i < IW_SIZE_MODUL_LIST; i++)
++	for(i = 0; i < sizeof(iw_modul_list)/sizeof(iw_modul_list[0]); i++)
+ 	  {
+ 	    if((modul & iw_modul_list[i].mask) == iw_modul_list[i].mask)
+ 	      {

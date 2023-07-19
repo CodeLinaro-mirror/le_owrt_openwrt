@@ -17,6 +17,7 @@ PKG_USE_MIPS16 ?= 1
 PKG_IREMAP ?= 1
 PKG_SKIP_DOWNLOAD=$(USE_SOURCE_DIR)$(USE_GIT_TREE)$(USE_GIT_SRC_CHECKOUT)
 
+CONFIG_OTA_PACKAGE_VERIFICATION:=n
 SIGN_KEY:= LD_LIBRARY_PATH=$(TOPDIR)/src/kernel-$(LINUX_VERSION)/kernel_platform/prebuilts/kernel-build-tools/linux-x86/lib64/ \
            $(TOPDIR)/src/kernel-$(LINUX_VERSION)/out/msm-kernel-$(KERNEL_PLATFORM_TARGET)-$(TARGET_VARIANT)_defconfig/msm-kernel/scripts/sign-file sha512 \
           $(TOPDIR)/src/kernel-$(LINUX_VERSION)/out/msm-kernel-$(KERNEL_PLATFORM_TARGET)-$(TARGET_VARIANT)_defconfig/msm-kernel/certs/signing_key.pem \

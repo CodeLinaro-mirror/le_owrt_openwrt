@@ -97,6 +97,25 @@ setup_interface () {
 	fi
 }
 
+deconfig_backhaul() {
+    rm /tmp/ipv4config.$INTERFACE
+
+    echo " deconfig_backhaul for /tmp/ipv4config.$INTERFACE"
+    /etc/data/backhaulCommonConfig.sh switch_bh
+}
+
+setup_backhaul() {
+    echo "export IFNAME=\"$interface\""   > /tmp/ipv4config.$INTERFACE
+    echo "export PUBLIC_IP=\"$ip\""      >> /tmp/ipv4config.$INTERFACE
+    echo "export NETMASK=\"$subnet\""    >> /tmp/ipv4config.$INTERFACE
+    echo "export DNSSERVERS=\"$dns\""    >> /tmp/ipv4config.$INTERFACE
+    echo "export GATEWAY=\"$router\""    >> /tmp/ipv4config.$INTERFACE
+
+    echo " setup_backhaul for /tmp/ipv4config.$INTERFACE"
+
+    /etc/data/backhaulCommonConfig.sh switch_bh
+}
+
 deconfig_interface() {
 	proto_init_update "*" 0
 	proto_send_update "$INTERFACE"
@@ -105,9 +124,12 @@ deconfig_interface() {
 case "$1" in
 	deconfig)
 		deconfig_interface
+		deconfig_backhaul
 	;;
 	renew|bound)
 		setup_interface
+		setup_backhaul
+
 	;;
 esac
 

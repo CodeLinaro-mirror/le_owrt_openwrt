@@ -52,7 +52,7 @@ HOST_CFLAGS+="-I$(STAGING_DIR_HOSTPKG)/include"
 
 HOST_CONFIGURE_ARGS+= \
         --disable-tests \
-        --without-crypto \
+        --with-crypto \
         --without-xattr \
         --without-zstd \
         --without-lzo  \

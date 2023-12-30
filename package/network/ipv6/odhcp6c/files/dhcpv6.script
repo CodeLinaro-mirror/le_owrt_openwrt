@@ -219,19 +219,67 @@ teardown_interface() {
 	proto_send_update "$INTERFACE"
 }
 
+deconfig_backhaul_v6() {
+    local intf_name=${INTERFACE%_v6*}
+	rm /tmp/ipv6config.$intf_name
+
+	echo " deconfig_backhaul for /tmp/ipv4config.$intf_name"
+	/etc/data/backhaulCommonConfig.sh switch_bh_v6
+}
+
+setup_backhaul_v6() {
+	local intf_name=${INTERFACE%_v6*}
+        local device_name=`uci get network.$INTERFACE.device`
+
+        echo "export IFNAME=\"$device_name\""    > /tmp/ipv6config.$intf_name
+
+	for entry in $ADDRESSES; do
+		local addr="${entry%%/*}"
+		entry="${entry#*/}"
+		local mask="${entry%%,*}"
+		entry="${entry#*,}"
+
+		echo "export PUBLIC_IP6=\"$addr\""  >> /tmp/ipv6config.$intf_name
+		echo "export NETMASK6=\"$mask\""    >> /tmp/ipv6config.$intf_name
+
+		for xentry in $RA_ROUTES; do
+			local xprefix="${xentry%%,*}"
+			xentry="${xentry#*,}"
+			local xgw="${xentry%%,*}"
+
+			echo "export PREFIX6=\"$xprefix\"" >> /tmp/ipv6config.$intf_name
+			echo "export GATEWAY6=\"$xgw\""    >> /tmp/ipv6config.$intf_name
+
+			break
+		done
+
+		break
+
+	done
+
+	echo "export DNSSERVERS6=\"$RDNSS\""    >> /tmp/ipv6config.$intf_name
+
+	echo " setup_backhaul for /tmp/ipv6config.$intf_name"
+
+    /etc/data/backhaulCommonConfig.sh switch_bh_v6
+}
+
 case "$2" in
 	bound)
 		teardown_interface "$1"
 		setup_interface "$1"
+		setup_backhaul_v6
 	;;
 	informed|updated|rebound)
 		setup_interface "$1"
+		setup_backhaul_v6
 	;;
 	ra-updated)
-		[ -n "$ADDRESSES$RA_ADDRESSES$PREFIXES$USERPREFIX" ] && setup_interface "$1"
+		[ -n "$ADDRESSES$RA_ADDRESSES$PREFIXES$USERPREFIX" ] && setup_interface "$1" && setup_backhaul_v6
 	;;
 	started|stopped|unbound)
 		teardown_interface "$1"
+		deconfig_backhaul_v6
 	;;
 esac
 

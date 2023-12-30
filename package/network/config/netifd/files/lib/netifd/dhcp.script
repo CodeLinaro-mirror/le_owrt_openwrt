@@ -97,24 +97,40 @@ setup_interface () {
 	fi
 }
 
+#QCOM change to support backhaul switch
+#+++++++++++++++++ Begin ++++++++++++++++++++++
 deconfig_backhaul() {
-    rm /tmp/ipv4config.$INTERFACE
-
-    echo " deconfig_backhaul for /tmp/ipv4config.$INTERFACE"
-    /etc/data/backhaulCommonConfig.sh switch_bh
+	echo " deconfig_backhaul for /tmp/ipv4config.$INTERFACE"
+	if [ -f /tmp/ipv4config.$INTERFACE ]; then
+	    # file /tmp/ipv4config.$INTERFACE will used by backhaulCommonConfig.sh
+	    # and then delete internal by backhaulCommonConfig.sh to ensure check backhaul active correct
+		/etc/data/backhaulCommonConfig.sh switch_bh $INTERFACE 0
+	fi
 }
 
 setup_backhaul() {
-    echo "export IFNAME=\"$interface\""   > /tmp/ipv4config.$INTERFACE
-    echo "export PUBLIC_IP=\"$ip\""      >> /tmp/ipv4config.$INTERFACE
-    echo "export NETMASK=\"$subnet\""    >> /tmp/ipv4config.$INTERFACE
-    echo "export DNSSERVERS=\"$dns\""    >> /tmp/ipv4config.$INTERFACE
-    echo "export GATEWAY=\"$router\""    >> /tmp/ipv4config.$INTERFACE
+	local ipv4_change=0
+	if [ -f /tmp/ipv4config.$INTERFACE ]; then
+		. /tmp/ipv4config.$INTERFACE
+	fi
 
-    echo " setup_backhaul for /tmp/ipv4config.$INTERFACE"
+	echo "export IFNAME=\"$interface\""   > /tmp/ipv4config.$INTERFACE
+	echo "export PUBLIC_IP=\"$ip\""      >> /tmp/ipv4config.$INTERFACE
+	echo "export NETMASK=\"$subnet\""    >> /tmp/ipv4config.$INTERFACE
+	echo "export DNSSERVERS=\"$dns\""    >> /tmp/ipv4config.$INTERFACE
+	echo "export GATEWAY=\"$router\""    >> /tmp/ipv4config.$INTERFACE
 
-    /etc/data/backhaulCommonConfig.sh switch_bh
+	echo " setup_backhaul for /tmp/ipv4config.$INTERFACE"
+
+	if [ "$GATEWAY" != "$router" ] || [ "$DNSSERVERS" != "$dns" ] || [ "$NETMASK" != "$subnet" ] || [ "$PUBLIC_IP" != "$ip" ]; then
+		ipv4_change=1
+	fi
+
+	if [ $ipv4_change == 1 ]; then
+		/etc/data/backhaulCommonConfig.sh switch_bh $INTERFACE 1
+	fi
 }
+#+++++++++++++++++ End ++++++++++++++++++++++
 
 deconfig_interface() {
 	proto_init_update "*" 0
@@ -124,11 +140,17 @@ deconfig_interface() {
 case "$1" in
 	deconfig)
 		deconfig_interface
+#QCOM change to support backhaul switch
+#+++++++++++++++++ Begin ++++++++++++++++++++++
 		deconfig_backhaul
+#+++++++++++++++++ End ++++++++++++++++++++++
 	;;
 	renew|bound)
 		setup_interface
+#QCOM change to support backhaul switch
+#+++++++++++++++++ Begin ++++++++++++++++++++++
 		setup_backhaul
+#+++++++++++++++++ End ++++++++++++++++++++++
 
 	;;
 esac

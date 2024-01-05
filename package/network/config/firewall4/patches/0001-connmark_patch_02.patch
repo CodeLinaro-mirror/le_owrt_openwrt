@@ -1,0 +1,41 @@
+This patch file is from Qualcomm Innovation Center, Inc. and is provided under the following license:
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+From 3fbd8a6acabb8a3619c665ca5f6db1a2e7b76cea Mon Sep 17 00:00:00 2001
+From: ayukuma <quic_ayukuma@quicinc.com>
+Date: Thu, 16 Nov 2023 15:14:21 +0530
+Subject: [PATCH] connmark_patch_02
+
+This patch will enable target connmark through uci in fw4.
+
+Signed-off-by: Ayush Kumar<quic_ayukuma@quicinc.com>
+---
+ root/usr/share/firewall4/templates/rule.uc | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/root/usr/share/firewall4/templates/rule.uc b/root/usr/share/firewall4/templates/rule.uc
+index 439d0fc..91e3f32 100644
+--- a/root/usr/share/firewall4/templates/rule.uc
++++ b/root/usr/share/firewall4/templates/rule.uc
+@@ -85,6 +85,18 @@
+ 						? `mark xor ${fw4.hex(rule.set_xmark.mark)}`
+ 						: `mark and ${fw4.hex(~rule.set_xmark.mask & 0xFFFFFFFF)} xor ${fw4.hex(rule.set_xmark.mark)}`
+ 	}} {%+
++   elif (rule.target == "connmark"): -%}
++	ct mark set {{
++		(rule.set_xmark.mask == 0xFFFFFFFF)
++			? fw4.hex(rule.set_xmark.mark)
++			: (rule.set_xmark.mark == 0)
++				? 'mark and ' + fw4.hex(~rule.set_xmark.mask & 0xFFFFFFFF)
++				: (rule.set_xmark.mark == rule.set_xmark.mask)
++					? 'mark or ' + fw4.hex(rule.set_xmark.mark)
++					: (rule.set_xmark.mask == 0)
++						? 'mark xor ' + fw4.hex(rule.set_xmark.mark)
++						: 'mark and ' + fw4.hex(~r.set_xmark.mask & 0xFFFFFFFF) + ' xor ' + fw4.hex(r.set_xmark.mark)
++	}} {%+
+    elif (rule.target == "dscp"): -%}
+ 	{{ fw4.ipproto(rule.family) }} dscp set {{ fw4.hex(rule.set_dscp.dscp) }} {%+
+    elif (rule.target == "notrack"): -%}
+-- 
+2.17.1
+

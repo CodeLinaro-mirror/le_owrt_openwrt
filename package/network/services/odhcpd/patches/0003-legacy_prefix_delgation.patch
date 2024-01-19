@@ -1,43 +1,41 @@
-From 2d85f2098508dda48628b31d279617c6230844a7 Mon Sep 17 00:00:00 2001
+From 280fc8d4e2d0e68980c7d4725feb7443d6216f9e Mon Sep 17 00:00:00 2001
 From: HuaWen CHEN <quic_huawenc@quicinc.com>
-Date: Fri, 17 Nov 2023 18:36:44 +0800
+Date: Fri, 19 Jan 2024 09:54:22 +0800
 Subject: [PATCH] legacy_prefix_delgation
 
 introduce new UCI option legacy_prefix_delegation_mode.
 when it is enabled,
 odhcpd will query prefix delegation by pd_manager when receive RS,
 and send delegated-prefix in RA message.
-
-Signed-off-by: HuaWen CHEN <quic_huawenc@quicinc.com>
 ---
- src/config.c    |   6 ++
- src/dhcpv6-ia.c |  40 +++++++
- src/dhcpv6.c    |   2 +
- src/odhcpd.h    |  50 +++++++++
- src/router.c    | 274 ++++++++++++++++++++++++++++++++++++++++++++++++
- 5 files changed, 372 insertions(+)
+ src/config.c    |   5 +
+ src/dhcpv6-ia.c |  35 +++++++
+ src/dhcpv6.c    |   1 +
+ src/odhcpd.h    |  49 +++++++++
+ src/router.c    | 272 ++++++++++++++++++++++++++++++++++++++++++++++++
+ 5 files changed, 362 insertions(+)
 
 diff --git a/src/config.c b/src/config.c
-index 04dea26..afc6fc1 100644
+index 2158be7..d2ff862 100644
 --- a/src/config.c
 +++ b/src/config.c
-@@ -90,6 +90,7 @@ enum {
- 	IFACE_ATTR_PREFIX_FILTER,
+@@ -91,6 +91,7 @@ enum {
  	IFACE_ATTR_PREFERRED_LIFETIME,
  	IFACE_ATTR_NTP,
+ 	IFACE_ATTR_STA_BRIDGE_MODE,
 +	IFACE_ATTR_QCMAP_PREFIX_DELEGATION_MODE,
  	IFACE_ATTR_MAX
  };
  
-@@ -141,6 +142,7 @@ static const struct blobmsg_policy iface_attrs[IFACE_ATTR_MAX] = {
- 	[IFACE_ATTR_PREFIX_FILTER] = { .name = "prefix_filter", .type = BLOBMSG_TYPE_STRING },
+@@ -143,6 +144,7 @@ static const struct blobmsg_policy iface_attrs[IFACE_ATTR_MAX] = {
  	[IFACE_ATTR_PREFERRED_LIFETIME] = { .name = "preferred_lifetime", .type = BLOBMSG_TYPE_STRING },
  	[IFACE_ATTR_NTP] = { .name = "ntp", .type = BLOBMSG_TYPE_ARRAY },
+ 	[IFACE_ATTR_STA_BRIDGE_MODE] = { .name = "sta_bridge_mode", .type = BLOBMSG_TYPE_BOOL },
 +	[IFACE_ATTR_QCMAP_PREFIX_DELEGATION_MODE] = { .name = "qcmap_prefix_delegation_mode", .type = BLOBMSG_TYPE_INT32 },
  };
  
  static const struct uci_blob_param_info iface_attr_info[IFACE_ATTR_MAX] = {
-@@ -556,6 +558,7 @@ int config_parse_interface(void *data, size_t len, const char *name, bool overwr
+@@ -557,6 +559,7 @@ int config_parse_interface(void *data, size_t len, const char *name, bool overwr
  		iface->ndp_fd = -1;
  		iface->dhcpv4_event.uloop.fd = -1;
  		INIT_LIST_HEAD(&iface->ia_assignments);
@@ -45,18 +43,17 @@ index 04dea26..afc6fc1 100644
  		INIT_LIST_HEAD(&iface->dhcpv4_assignments);
  		INIT_LIST_HEAD(&iface->dhcpv4_fr_ips);
  
-@@ -1039,6 +1042,9 @@ int config_parse_interface(void *data, size_t len, const char *name, bool overwr
- 		}
- 	}
+@@ -1042,6 +1045,8 @@ int config_parse_interface(void *data, size_t len, const char *name, bool overwr
+ 	if ((c = tb[IFACE_ATTR_STA_BRIDGE_MODE]))
+ 		iface->sta_bridge_mode = blobmsg_get_bool(c);
  
 +	if ((c = tb[IFACE_ATTR_QCMAP_PREFIX_DELEGATION_MODE]))
 +		iface->qcmap_prefix_delegation_mode = blobmsg_get_u32(c);
-+
+ 
  	return 0;
  
- err:
 diff --git a/src/dhcpv6-ia.c b/src/dhcpv6-ia.c
-index e8255b5..634bfe5 100644
+index e8255b5..aad3c30 100644
 --- a/src/dhcpv6-ia.c
 +++ b/src/dhcpv6-ia.c
 @@ -514,6 +514,11 @@ static void managed_handle_pd_data(struct ustream *s, _unused int bytes_new)
@@ -71,27 +68,26 @@ index e8255b5..634bfe5 100644
  	for (;;) {
  		int pending;
  		char *data = ustream_get_read_buf(s, &pending);
-@@ -534,6 +539,8 @@ static void managed_handle_pd_data(struct ustream *s, _unused int bytes_new)
+@@ -533,6 +538,7 @@ static void managed_handle_pd_data(struct ustream *s, _unused int bytes_new)
+ 		for (char *line = strtok_r(data, "\n", &saveptr); line; line = strtok_r(NULL, "\n", &saveptr)) {
  			c->managed = realloc(c->managed, (c->managed_size + 1) * sizeof(*c->managed));
  			struct odhcpd_ipaddr *n = &c->managed[c->managed_size];
- 
 +            syslog(LOG_INFO, "managed_handle_pd_data: receive %s", line);
-+
+ 
  			char *saveptr2, *x = strtok_r(line, "/", &saveptr2);
  			if (!x || inet_pton(AF_INET6, x, &n->addr) < 1)
- 				continue;
-@@ -550,6 +557,10 @@ static void managed_handle_pd_data(struct ustream *s, _unused int bytes_new)
+@@ -550,6 +556,10 @@ static void managed_handle_pd_data(struct ustream *s, _unused int bytes_new)
  			if (sscanf(x, "%u", &n->valid) < 1)
  				continue;
  
-+			x = strtok_r(NULL, ",", &saveptr2);
-+			if (sscanf(x, "%lu", &new_assigned_host_id) < 1)
-+				continue;
++            x = strtok_r(NULL, ",", &saveptr2);
++            if (sscanf(x, "%lu", &new_assigned_host_id) < 1)
++                continue;
 +
  			if (n->preferred > n->valid)
  				continue;
  
-@@ -565,6 +576,19 @@ static void managed_handle_pd_data(struct ustream *s, _unused int bytes_new)
+@@ -565,6 +575,18 @@ static void managed_handle_pd_data(struct ustream *s, _unused int bytes_new)
  
  			n->dprefix = 0;
  
@@ -107,24 +103,22 @@ index e8255b5..634bfe5 100644
 +                }
 +            }
 +
-+
  			++c->managed_size;
  		}
  
-@@ -596,8 +620,12 @@ static bool assign_pd(struct interface *iface, struct dhcp_assignment *assign)
+@@ -595,9 +617,11 @@ static void managed_handle_pd_done(struct ustream *s)
+ static bool assign_pd(struct interface *iface, struct dhcp_assignment *assign)
  {
  	struct dhcp_assignment *c;
++	syslog(LOG_INFO, "assign_pd: iface->addr6_len=%d", iface->addr6_len);
  
-+    syslog(LOG_INFO, "assign_pd: iface->addr6_len=%d", iface->addr6_len);
-+
  	if (iface->dhcpv6_pd_manager[0]) {
  		int fd = usock(USOCK_UNIX | USOCK_TCP, iface->dhcpv6_pd_manager, NULL);
-+
-+        syslog(LOG_INFO, "assign_pd: open socket to %s", iface->dhcpv6_pd_manager);
++		syslog(LOG_INFO, "assign_pd: open socket to %s", iface->dhcpv6_pd_manager);
  		if (fd >= 0) {
  			struct pollfd pfd = { .fd = fd, .events = POLLIN };
  			char iaidbuf[298];
-@@ -609,12 +637,14 @@ static bool assign_pd(struct interface *iface, struct dhcp_assignment *assign)
+@@ -609,12 +633,14 @@ static bool assign_pd(struct interface *iface, struct dhcp_assignment *assign)
  			ustream_fd_init(&assign->managed_sock, fd);
  			ustream_printf(&assign->managed_sock.stream, "%s,%x\n::/%d,0,0\n\n",
  					iaidbuf, assign->iaid, assign->length);
@@ -139,7 +133,7 @@ index e8255b5..634bfe5 100644
  
  			/* Wait initial period of up to 250ms for immediate assignment */
  			if (poll(&pfd, 1, 250) < 0) {
-@@ -1349,11 +1379,21 @@ ssize_t dhcpv6_ia_handle_IAs(uint8_t *buf, size_t buflen, struct interface *ifac
+@@ -1349,11 +1375,20 @@ ssize_t dhcpv6_ia_handle_IAs(uint8_t *buf, size_t buflen, struct interface *ifac
  		if (a && a->managed_size < 0)
  			return -1;
  
@@ -150,7 +144,6 @@ index e8255b5..634bfe5 100644
  				(hdr->msg_type == DHCPV6_MSG_REBIND && !a)) {
  			bool assigned = !!a;
  
-+
 +			syslog(LOG_INFO, "dhcpv6_ia_handle_IAs: a:%x, iface->no_dynamic_dhcp:%d, is_na:%d, iface->dhcpv6_pd:%d, iface->dhcpv6_na:%d", a, iface->no_dynamic_dhcp, is_na, iface->dhcpv6_pd, iface->dhcpv6_na);
 +			if (iface->qcmap_prefix_delegation_mode == QCMAP_PREFIX_DELEGATION_MODE_LEGACY)
 +			{
@@ -162,20 +155,19 @@ index e8255b5..634bfe5 100644
  				if ((!iface->no_dynamic_dhcp || (l && is_na)) &&
  				    (iface->dhcpv6_pd || iface->dhcpv6_na)) {
 diff --git a/src/dhcpv6.c b/src/dhcpv6.c
-index b086fd8..bbd9e09 100644
+index b086fd8..dd65b4b 100644
 --- a/src/dhcpv6.c
 +++ b/src/dhcpv6.c
-@@ -635,6 +635,8 @@ static void handle_client_request(void *addr, void *data, size_t len,
+@@ -635,6 +635,7 @@ static void handle_client_request(void *addr, void *data, size_t len,
  	} else
  #endif	/* DHCPV4_SUPPORT */
  	if (hdr->msg_type != DHCPV6_MSG_INFORMATION_REQUEST) {
-+
-+        syslog(LOG_INFO, "call dhcpv6_ia_handle_IAs:");
++		syslog(LOG_INFO, "call dhcpv6_ia_handle_IAs:");
  		ssize_t ialen = dhcpv6_ia_handle_IAs(pdbuf, sizeof(pdbuf), iface, addr, (const void *)hdr, opts_end);
  
  		iov[IOV_PDBUF].iov_len = ialen;
 diff --git a/src/odhcpd.h b/src/odhcpd.h
-index 9f620df..b5b96c4 100644
+index f4a1223..843906d 100644
 --- a/src/odhcpd.h
 +++ b/src/odhcpd.h
 @@ -47,6 +47,10 @@
@@ -220,23 +212,23 @@ index 9f620df..b5b96c4 100644
  	// NDP runtime data
  	struct odhcpd_event ndp_event;
  	int ndp_ping_fd;
-@@ -361,6 +382,11 @@ struct interface {
- 	struct in6_addr *dhcpv6_sntp;
+@@ -362,6 +383,12 @@ struct interface {
  	size_t dhcpv6_sntp_cnt;
  
-+    // Legacy Prefix Delegation,
-+    // 1: Legacy Prefix Delegation, use RS/RA for prefix delegation
-+    // 2: IDU Prefix Delegation, use DHCPv6/Prefix-Delegation
-+    uint32_t qcmap_prefix_delegation_mode;
+ 	bool sta_bridge_mode;
 +
- 	//uloop fd
- 	int fd_uloop;
++	// Legacy Prefix Delegation,
++	// 1: Legacy Prefix Delegation, use RS/RA for prefix delegation
++	// 2: IDU Prefix Delegation, use DHCPv6/Prefix-Delegation
++	uint32_t qcmap_prefix_delegation_mode;
++
  };
-@@ -381,6 +407,30 @@ inline static void free_assignment(struct dhcp_assignment *a)
+ 
+ extern struct avl_tree interfaces;
+@@ -380,6 +407,28 @@ inline static void free_assignment(struct dhcp_assignment *a)
  	free(a);
  }
  
-+
 +inline static void free_ra_prefix_assignment(struct ra_prefix_assignment *a)
 +{
 +	list_del(&a->head);
@@ -259,25 +251,23 @@ index 9f620df..b5b96c4 100644
 +	return a;
 +}
 +
-+
  inline static struct dhcp_assignment *alloc_assignment(size_t extra_len)
  {
  	struct dhcp_assignment *a = calloc(1, sizeof(*a) + extra_len);
 diff --git a/src/router.c b/src/router.c
-index 949cbe7..1d818bb 100644
+index 2b6516d..334c93d 100644
 --- a/src/router.c
 +++ b/src/router.c
-@@ -29,6 +29,9 @@
+@@ -32,6 +32,8 @@
  #include "router.h"
  #include "odhcpd.h"
  
 +#include <poll.h>
 +#include <libubox/usock.h>
-+
  
  static void forward_router_solicitation(const struct interface *iface);
  static void forward_router_advertisement(const struct interface *iface, uint8_t *data, size_t len);
-@@ -44,6 +47,7 @@ static FILE *fp_route = NULL;
+@@ -47,6 +49,7 @@ static FILE *fp_route = NULL;
  
  
  #define TIME_LEFT(t1, now) ((t1) != UINT32_MAX ? (t1) - (now) : UINT32_MAX)
@@ -285,19 +275,18 @@ index 949cbe7..1d818bb 100644
  
  int router_init(void)
  {
-@@ -177,6 +181,7 @@ int router_setup_interface(struct interface *iface, bool enable)
+@@ -180,6 +183,7 @@ int router_setup_interface(struct interface *iface, bool enable)
  
  			iface->router_event.handle_dgram = handle_icmpv6;
  			iface->ra_sent = 0;
-+            syslog(LOG_ERR, "odhcpd_register for iface %s", iface->ifname);
++			syslog(LOG_ERR, "odhcpd_register for iface %s", iface->ifname);
  			odhcpd_register(&iface->router_event);
  		} else {
  			uloop_timeout_cancel(&iface->timer_rs);
-@@ -427,6 +432,214 @@ struct nd_opt_route_info {
- 	uint32_t addr[4];
- };
+@@ -497,6 +501,213 @@ static int send_RS_withUnspecifiedSrc(struct interface *iface, struct sockaddr_i
+ 	return 0;
+ }
  
-+
 +/* More data was received from TCP connection */
 +static void router_managed_handle_pd_data(struct ustream *s, _unused int bytes_new)
 +{
@@ -505,10 +494,10 @@ index 949cbe7..1d818bb 100644
 +
 +}
 +
+ 
  /* Router Advert server mode */
  static int send_router_advert(struct interface *iface, const struct in6_addr *from)
- {
-@@ -485,6 +698,8 @@ static int send_router_advert(struct interface *iface, const struct in6_addr *fr
+@@ -556,6 +767,8 @@ static int send_router_advert(struct interface *iface, const struct in6_addr *fr
  	iov[IOV_RA_ADV].iov_base = (char *)&adv;
  	iov[IOV_RA_ADV].iov_len = sizeof(adv);
  
@@ -517,7 +506,7 @@ index 949cbe7..1d818bb 100644
  	valid_addr_cnt = (iface->timer_rs.cb /* if not shutdown */ ? iface->addr6_len : 0);
  	invalid_addr_cnt = iface->invalid_addr6_len;
  
-@@ -531,6 +746,52 @@ static int send_router_advert(struct interface *iface, const struct in6_addr *fr
+@@ -602,6 +815,52 @@ static int send_router_advert(struct interface *iface, const struct in6_addr *fr
  			}
  		}
  	}
@@ -570,11 +559,11 @@ index 949cbe7..1d818bb 100644
  
  	/* Construct Prefix Information options */
  	for (ssize_t i = 0; i < valid_addr_cnt + invalid_addr_cnt; ++i) {
-@@ -789,6 +1050,19 @@ static void trigger_router_advert(struct uloop_timeout *event)
+@@ -860,6 +1119,19 @@ static void trigger_router_advert(struct uloop_timeout *event)
  	struct interface *iface = container_of(event, struct interface, timer_rs);
  	int msecs = send_router_advert(iface, NULL);
  
-+	if(iface->qcmap_prefix_delegation_mode == QCMAP_PREFIX_DELEGATION_MODE_LEGACY)
++	if(iface->dhcpv6_pd_manager[0])
 +	{
 +		struct ra_prefix_assignment *c = NULL;
 +		//find assignment

@@ -1,4 +1,4 @@
-From 397087da7b0e8bf61907a40ee1f4f41ac09ab166 Mon Sep 17 00:00:00 2001
+From 357cfa183f168b740997381e4a7573c3b7672392 Mon Sep 17 00:00:00 2001
 From: HuaWen CHEN <quic_huawenc@quicinc.com>
 Date: Fri, 19 Jan 2024 09:54:22 +0800
 Subject: [PATCH] legacy_prefix_delgation
@@ -9,11 +9,11 @@ odhcpd will query prefix delegation by pd_manager when receive RS,
 and send delegated-prefix in RA message.
 ---
  src/config.c    |   5 +
- src/dhcpv6-ia.c |  35 ++++++
+ src/dhcpv6-ia.c |  35 +++++++
  src/dhcpv6.c    |   1 +
  src/odhcpd.h    |  49 +++++++++
- src/router.c    | 276 +++++++++++++++++++++++++++++++++++++++++++++++-
- 5 files changed, 365 insertions(+), 1 deletion(-)
+ src/router.c    | 272 ++++++++++++++++++++++++++++++++++++++++++++++++
+ 5 files changed, 362 insertions(+)
 
 diff --git a/src/config.c b/src/config.c
 index 2158be7..d2ff862 100644
@@ -255,7 +255,7 @@ index f4a1223..843906d 100644
  {
  	struct dhcp_assignment *a = calloc(1, sizeof(*a) + extra_len);
 diff --git a/src/router.c b/src/router.c
-index 2b6516d..3afc7b2 100644
+index 2b6516d..d60b58c 100644
 --- a/src/router.c
 +++ b/src/router.c
 @@ -32,6 +32,8 @@
@@ -559,14 +559,11 @@ index 2b6516d..3afc7b2 100644
  
  	/* Construct Prefix Information options */
  	for (ssize_t i = 0; i < valid_addr_cnt + invalid_addr_cnt; ++i) {
-@@ -858,7 +1117,22 @@ static int send_router_advert(struct interface *iface, const struct in6_addr *fr
- static void trigger_router_advert(struct uloop_timeout *event)
- {
+@@ -860,6 +1119,19 @@ static void trigger_router_advert(struct uloop_timeout *event)
  	struct interface *iface = container_of(event, struct interface, timer_rs);
--	int msecs = send_router_advert(iface, NULL);
-+	int msecs = 0;
-+
-+	if(iface->dhcpv6_pd_manager[0])
+ 	int msecs = send_router_advert(iface, NULL);
+ 
++	if(iface->qcmap_prefix_delegation_mode == QCMAP_PREFIX_DELEGATION_MODE_LEGACY)
 +	{
 +		struct ra_prefix_assignment *c = NULL;
 +		//find assignment
@@ -578,11 +575,10 @@ index 2b6516d..3afc7b2 100644
 +		if(msecs == 0)
 +			return;
 +	}
-+	else
-+		msecs = send_router_advert(iface, NULL);
- 
++
  	/* Rearm timer if not shut down */
  	if (event->cb)
+ 		uloop_timeout_set(event, msecs);
 -- 
 2.40.0.windows.1
 

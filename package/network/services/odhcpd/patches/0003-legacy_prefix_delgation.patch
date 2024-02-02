@@ -1,4 +1,4 @@
-From 357cfa183f168b740997381e4a7573c3b7672392 Mon Sep 17 00:00:00 2001
+From bfe09f7197f8d947164270fca2e1f56877166605 Mon Sep 17 00:00:00 2001
 From: HuaWen CHEN <quic_huawenc@quicinc.com>
 Date: Fri, 19 Jan 2024 09:54:22 +0800
 Subject: [PATCH] legacy_prefix_delgation
@@ -255,7 +255,7 @@ index f4a1223..843906d 100644
  {
  	struct dhcp_assignment *a = calloc(1, sizeof(*a) + extra_len);
 diff --git a/src/router.c b/src/router.c
-index 2b6516d..d60b58c 100644
+index 2b6516d..6b29fc9 100644
 --- a/src/router.c
 +++ b/src/router.c
 @@ -32,6 +32,8 @@
@@ -388,7 +388,7 @@ index 2b6516d..d60b58c 100644
 +			continue;
 +
 +		prefix = addrs[i].addr.in6;
-+		prefix.s6_addr32[1] |= htonl(64);
++		prefix.s6_addr32[1] |= htonl(0);
 +		prefix.s6_addr32[2] = prefix.s6_addr32[3] = 0;
 +		netlink_setup_route(&prefix, (a->managed_size) ? addrs[i].prefix : 64,
 +				a->iface->ifindex, NULL, 1024, add);
@@ -580,5 +580,5 @@ index 2b6516d..d60b58c 100644
  	if (event->cb)
  		uloop_timeout_set(event, msecs);
 -- 
-2.40.0.windows.1
+2.41.0.windows.3
 

@@ -1,14 +1,14 @@
-From e77e29af719cfbb65ce5e35ae1a125ee57d94249 Mon Sep 17 00:00:00 2001
+From b3a80ef3f7f98f822d52c20a29ef357d1e76f469 Mon Sep 17 00:00:00 2001
 From: HuaWen CHEN <quic_huawenc@quicinc.com>
 Date: Tue, 2 Jan 2024 10:41:33 +0800
 Subject: [PATCH] odhcpd: add support bridge mode
 
 ---
  src/config.c |   6 ++
- src/ndp.c    | 194 ++++++++++++++++++++++++++++++++++++++++++++++++++-
+ src/ndp.c    | 196 ++++++++++++++++++++++++++++++++++++++++++++++++++-
  src/odhcpd.h |   1 +
- src/router.c |  82 +++++++++++++++++++++-
- 4 files changed, 281 insertions(+), 2 deletions(-)
+ src/router.c |  82 ++++++++++++++++++++-
+ 4 files changed, 282 insertions(+), 3 deletions(-)
 
 diff --git a/src/config.c b/src/config.c
 index 4a5ee30..2158be7 100644
@@ -42,7 +42,7 @@ index 4a5ee30..2158be7 100644
  
  err:
 diff --git a/src/ndp.c b/src/ndp.c
-index 2d0767a..3d0734e 100644
+index 2d0767a..389226c 100644
 --- a/src/ndp.c
 +++ b/src/ndp.c
 @@ -72,6 +72,18 @@ struct sock_filter bpf_ns_na[] =
@@ -223,6 +223,15 @@ index 2d0767a..3d0734e 100644
  /* Handle solicitations */
  static void handle_solicit(void *addr, void *data, size_t len,
  		struct interface *iface, _unused void *dest)
+@@ -648,7 +796,7 @@ static void handle_solicit(void *addr, void *data, size_t len,
+ 	if (len < sizeof(*ip6) + sizeof(*req))
+ 		return; // Invalid reqicitation
+ 
+-	if (IN6_IS_ADDR_LINKLOCAL(&req->nd_ns_target) ||
++	if ((iface->sta_bridge_mode == false && IN6_IS_ADDR_LINKLOCAL(&req->nd_ns_target)) ||
+ 			IN6_IS_ADDR_LOOPBACK(&req->nd_ns_target) ||
+ 			IN6_IS_ADDR_MULTICAST(&req->nd_ns_target))
+ 		return; /* Invalid target */
 @@ -721,6 +869,50 @@ static void handle_solicit(void *addr, void *data, size_t len,
  		}
  	}

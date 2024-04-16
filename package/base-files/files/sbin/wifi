@@ -307,6 +307,8 @@ case "$1" in
 	recover) wifi_recover "$2";;
 	load) wifi_load "$2";;
 	unload) wifi_unload "$2";;
+	multi_up|\
+	multi_down) ubus call network reload; multi_radio_wifi_updown "$@";;
 	--help|help) usage;;
 	reconf) wifi_updown "reconf" "$2";;
 	''|up) wifi_updown "enable" "$2";;

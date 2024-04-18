@@ -1,0 +1,32 @@
+From ed2b7758add720ab97d863d3b2b1d1eb0d37a2af Mon Sep 17 00:00:00 2001
+From: Bulbul Dabi <quic_bdabi@quicinc.com>
+Date: Wed, 27 Mar 2024 14:43:48 +0530
+Subject: [PATCH] procd:change dir to / even if console not present
+
+In case console is disabled, chdir("/") is not executed
+Forcing the chdir even when console is not present
+
+Signed-off-by: Bulbul Dabi <quic_bdabi@quicinc.com>
+---
+ state.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/state.c b/state.c
+index fb81248..f2d542f 100644
+--- a/state.c
++++ b/state.c
+@@ -49,8 +49,10 @@ static void set_stdio(const char* tty)
+ 	    !freopen(tty, "r", stdin) ||
+ 	    !freopen(tty, "w", stdout) ||
+ 	    !freopen(tty, "w", stderr) ||
+-	    chdir("/"))
++	    chdir("/")) {
+ 		ERROR("failed to set stdio: %m\n");
++		chdir("/");
++	}
+ 	else
+ 		fcntl(STDERR_FILENO, F_SETFL, fcntl(STDERR_FILENO, F_GETFL) | O_NONBLOCK);
+ }
+-- 
+2.7.4
+

@@ -1,0 +1,37 @@
+From 0c584b5281792b587ca1442c18770a7718d70e7f Mon Sep 17 00:00:00 2001
+From: aryamali <quic_aryamali@quicinc.com>
+Date: Wed, 31 Jan 2024 15:28:30 -0800
+Subject: [PATCH] netifd: Device to skip set ethtool on disabled flags
+
+- Fix is to skip ethtool set by adding check if flags are set
+- ethtool is deprecated in some eth drivers in favor of ethtool_get_link_ksettings
+- this causes loosing some info in get and setting wrong info
+- Temporary fix as subsquent upstream patches upgraded to ethtool_get_link_ksettings
+
+Signed-off-by: aryamali <quic_aryamali@quicinc.com>
+---
+ system-linux.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/system-linux.c b/system-linux.c
+index 0f13a99..ecf3ec1 100644
+--- a/system-linux.c
++++ b/system-linux.c
+@@ -1664,6 +1664,14 @@ system_set_ethtool_settings(struct device *dev, struct device_settings *s)
+ 	if (ecmd.autoneg && ecmd.advertising == adv)
+ 		return;
+ 
++	/*if none of the flags are set then skip updating ethtool*/
++	if ( !(s->flags & DEV_OPT_SPEED) && !(s->flags & DEV_OPT_DUPLEX) )
++	{
++		netifd_log_message(L_CRIT, "Skip set ethool for Device (%s) as flags (%d) (%u)\n",
++							dev->ifname, (s->flags & DEV_OPT_SPEED), (s->flags & DEV_OPT_DUPLEX));
++		return;
++	}
++
+ 	ecmd.autoneg = 1;
+ 	ecmd.advertising = adv;
+ 	ecmd.cmd = ETHTOOL_SSET;
+-- 
+2.17.1
+

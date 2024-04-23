@@ -1,4 +1,4 @@
-From bfe09f7197f8d947164270fca2e1f56877166605 Mon Sep 17 00:00:00 2001
+From a30b486dee640239af582d7614d77c7d7d8761d7 Mon Sep 17 00:00:00 2001
 From: HuaWen CHEN <quic_huawenc@quicinc.com>
 Date: Fri, 19 Jan 2024 09:54:22 +0800
 Subject: [PATCH] legacy_prefix_delgation
@@ -53,7 +53,7 @@ index 2158be7..d2ff862 100644
  	return 0;
  
 diff --git a/src/dhcpv6-ia.c b/src/dhcpv6-ia.c
-index e8255b5..aad3c30 100644
+index e8255b5..121c345 100644
 --- a/src/dhcpv6-ia.c
 +++ b/src/dhcpv6-ia.c
 @@ -514,6 +514,11 @@ static void managed_handle_pd_data(struct ustream *s, _unused int bytes_new)
@@ -81,7 +81,7 @@ index e8255b5..aad3c30 100644
  				continue;
  
 +            x = strtok_r(NULL, ",", &saveptr2);
-+            if (sscanf(x, "%lu", &new_assigned_host_id) < 1)
++            if (sscanf(x, "%"PRIu64, &new_assigned_host_id) < 1)
 +                continue;
 +
  			if (n->preferred > n->valid)
@@ -580,5 +580,5 @@ index 2b6516d..6b29fc9 100644
  	if (event->cb)
  		uloop_timeout_set(event, msecs);
 -- 
-2.41.0.windows.3
+2.40.0.windows.1
 

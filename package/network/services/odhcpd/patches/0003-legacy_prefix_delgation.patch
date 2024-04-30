@@ -1,21 +1,22 @@
-From 284684cf8d348ed5752bbb09daadaba71095bed0 Mon Sep 17 00:00:00 2001
+From dffaf67a51192f9e052a17748fc23b95d2620885 Mon Sep 17 00:00:00 2001
 From: HuaWen CHEN <quic_huawenc@quicinc.com>
 Date: Fri, 15 Mar 2024 13:11:30 +0800
-Subject: [PATCH] odhcpd: add support legacy_prefix_delgation
+Subject: [PATCH 1/2] odhcpd: add support legacy_prefix_delgation
 
 introduce new UCI option legacy_prefix_delegation_mode.
 when it is enabled,
 odhcpd will query prefix delegation by pd_manager when receive RS,
 and send delegated-prefix in RA message.
 
+Change-Id: I6fbc2a2649d2426d79d1e68c12f39b3b132ba4d3
 Signed-off-by: HuaWen CHEN <quic_huawenc@quicinc.com>
 ---
  src/config.c    |   5 +
- src/dhcpv6-ia.c |  35 +++++++
+ src/dhcpv6-ia.c |  34 ++++++
  src/dhcpv6.c    |   1 +
  src/odhcpd.h    |  49 +++++++++
  src/router.c    | 273 ++++++++++++++++++++++++++++++++++++++++++++++++
- 5 files changed, 363 insertions(+)
+ 5 files changed, 362 insertions(+)
 
 diff --git a/src/config.c b/src/config.c
 index aeb6cba..74906a3 100644
@@ -55,7 +56,7 @@ index aeb6cba..74906a3 100644
  	return 0;
  
 diff --git a/src/dhcpv6-ia.c b/src/dhcpv6-ia.c
-index 1fbed44..06a6e6a 100644
+index 1fbed44..5cb5d89 100644
 --- a/src/dhcpv6-ia.c
 +++ b/src/dhcpv6-ia.c
 @@ -649,6 +649,11 @@ static void managed_handle_pd_data(struct ustream *s, _unused int bytes_new)
@@ -89,7 +90,7 @@ index 1fbed44..06a6e6a 100644
  			if (n->preferred > n->valid)
  				continue;
  
-@@ -700,6 +710,18 @@ static void managed_handle_pd_data(struct ustream *s, _unused int bytes_new)
+@@ -700,6 +710,17 @@ static void managed_handle_pd_data(struct ustream *s, _unused int bytes_new)
  
  			n->dprefix = 0;
  
@@ -97,8 +98,7 @@ index 1fbed44..06a6e6a 100644
 +            struct dhcp_assignment *iana_a = NULL;
 +            list_for_each_entry(iana_a, headoflist, head) {
 +                if ((iana_a->clid_len == c->clid_len && !memcmp(iana_a->clid_data, c->clid_data, c->clid_len)) &&
-+                    iana_a->iaid == c->iaid && (INFINITE_VALID(iana_a->valid_until) || now < iana_a->valid_until) &&
-+                    (iana_a->flags & OAF_DHCPV6_NA)) {
++                    (INFINITE_VALID(iana_a->valid_until) || now < iana_a->valid_until) && (iana_a->flags & OAF_DHCPV6_NA)) {
 +                    iana_a->assigned_host_id=new_assigned_host_id;
 +                    syslog(LOG_INFO, "managed_handle_pd_data: update NA assignment 0x%x assigned_host_id=%d", iana_a, new_assigned_host_id);
 +                    break;
@@ -108,7 +108,7 @@ index 1fbed44..06a6e6a 100644
  			++c->managed_size;
  		}
  
-@@ -730,9 +752,11 @@ static void managed_handle_pd_done(struct ustream *s)
+@@ -730,9 +751,11 @@ static void managed_handle_pd_done(struct ustream *s)
  static bool assign_pd(struct interface *iface, struct dhcp_assignment *assign)
  {
  	struct dhcp_assignment *c;
@@ -120,7 +120,7 @@ index 1fbed44..06a6e6a 100644
  		if (fd >= 0) {
  			struct pollfd pfd = { .fd = fd, .events = POLLIN };
  			char iaidbuf[298];
-@@ -744,12 +768,14 @@ static bool assign_pd(struct interface *iface, struct dhcp_assignment *assign)
+@@ -744,12 +767,14 @@ static bool assign_pd(struct interface *iface, struct dhcp_assignment *assign)
  			ustream_fd_init(&assign->managed_sock, fd);
  			ustream_printf(&assign->managed_sock.stream, "%s,%x\n::/%d,0,0\n\n",
  					iaidbuf, assign->iaid, assign->length);
@@ -135,7 +135,7 @@ index 1fbed44..06a6e6a 100644
  
  			/* Wait initial period of up to 250ms for immediate assignment */
  			if (poll(&pfd, 1, 250) < 0) {
-@@ -1509,11 +1535,20 @@ ssize_t dhcpv6_ia_handle_IAs(uint8_t *buf, size_t buflen, struct interface *ifac
+@@ -1509,11 +1534,20 @@ ssize_t dhcpv6_ia_handle_IAs(uint8_t *buf, size_t buflen, struct interface *ifac
  		if (a && a->managed_size < 0)
  			return -1;
  
@@ -583,5 +583,5 @@ index 77249df..3779c87 100644
  	if (event->cb)
  		uloop_timeout_set(event, msecs);
 -- 
-2.40.0.windows.1
+2.41.0.windows.3
 

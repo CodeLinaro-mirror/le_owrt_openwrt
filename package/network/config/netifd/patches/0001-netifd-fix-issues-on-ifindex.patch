@@ -38,7 +38,7 @@ index 7e61b9d..a058092 100644
 +			int try_number=0;
 +			retry:
 +				D(SYSTEM, "bridge_member_cb: sleep 50ms to wait %s.ifindex ready\n", bm->dev.dev->ifname);
-+				usleep(50*100);
++				usleep(50*1000);
 +				device_set_ifindex(dev, system_if_resolve(dev));
 +				try_number++;
 +				if(try_number <=2 && dev->ifindex == 0)
@@ -69,7 +69,7 @@ index b3d0e85..c719f6f 100644
 +			int try_number=0;
 +			retry:
 +				D(DEVICE, "set_device_state: sleep 50ms to wait %s.ifindex ready\n", dev->ifname);
-+				usleep(50*100);
++				usleep(50*1000);
 +				device_set_ifindex(dev, system_if_resolve(dev));
 +				try_number++;
 +				if(try_number <=4 && dev->ifindex == 0)
@@ -89,7 +89,7 @@ index b3d0e85..c719f6f 100644
 +		{
 +			D(DEVICE, "set_device_state: system_if_up failed with ret=%d,errno:%d, sleep 50ms to retry\n", ret, errno);
 +			retry++;
-+			usleep(50*100);
++			usleep(50*1000);
 +			ret = system_if_up(dev);
 +		}
 +		D(DEVICE, "set_device_state: system_if_up result: %d, errno:%d\n", ret, errno);

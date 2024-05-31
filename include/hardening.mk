@@ -21,7 +21,7 @@ endif
 
 # add common optimize flags from yocto.
 ifeq ($(ARCH),arm)
-  TARGET_CFLAGS += -Wa,--noexecstack -fexpensive-optimizations -frename-registers -ftree-vectorize -finline-functions -finline-limit=64 -Wno-error=maybe-uninitialized -Wno-error=unused-result -mthumb
+  TARGET_CFLAGS += -Wa,--noexecstack -fexpensive-optimizations -frename-registers -ftree-vectorize -finline-functions -finline-limit=64 -Wno-error=maybe-uninitialized -Wno-error=stringop-overflow -Wno-error=unused-result -mthumb
 endif
 
 ifdef CONFIG_PKG_CHECK_FORMAT_SECURITY

@@ -302,5 +302,6 @@ case "$1" in
 	--help|help) usage;;
 	reconf) wifi_updown "reconf" "$2";;
 	''|up) wifi_updown "enable" "$2";;
+	mlo) mlo "$@";;
 	*) usage; exit 1;;
 esac

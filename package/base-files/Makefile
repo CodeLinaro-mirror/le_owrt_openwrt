@@ -214,6 +214,8 @@ endif
 
 	chmod 0600 $(1)/etc/shadow
 	chmod 1777 $(1)/tmp
+	chmod 0644 $(1)/lib/functions.sh
+	chmod 0644 $(1)/lib/functions/network.sh
 
 	$(call ImageConfigOptions,$(1))
 	$(call Package/base-files/install-target,$(1))

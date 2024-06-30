@@ -1,0 +1,49 @@
+This patch file is from Qualcomm Innovation Center, Inc. and is provided
+under the following license:
+
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+From 6cb43d7fd047c63ec112fafde56a204332175170 Mon Sep 17 00:00:00 2001
+From: ayukuma <quic_ayukuma@quicinc.com>
+Date: Sun, 30 Jun 2024 17:13:22 +0000
+Subject: [PATCH] masq-random-enable-02
+
+This patch will add masq_random option in config zone to add masquerade
+random in symmetric nat.
+
+Signed-off-by: Ayush Kumar<quic_ayukuma@quicinc.com>
+---
+ root/usr/share/firewall4/templates/zone-masq.uc | 7 ++++++-
+ root/usr/share/ucode/fw4.uc                     | 1 +
+ 2 files changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/root/usr/share/firewall4/templates/zone-masq.uc b/root/usr/share/firewall4/templates/zone-masq.uc
+index c3e66d8..4249bdc 100644
+--- a/root/usr/share/firewall4/templates/zone-masq.uc
++++ b/root/usr/share/firewall4/templates/zone-masq.uc
+@@ -10,4 +10,9 @@ meta nfproto {{ fw4.nfproto(family) }} {%+ if (saddrs && saddrs[0]): -%}
+ 	{{ fw4.ipproto(family) }} daddr != {{ fw4.set(map(daddrs[1], fw4.cidr)) }} {%+ endif -%}
+ {%+ for (let a in (daddrs ? daddrs[2] : [])): -%}
+ 	{{ fw4.ipproto(family) }} daddr & {{ a.mask }} {{ a.invert ? '!=' : '==' }} {{ a.addr }} {%+ endfor -%}
+-masquerade comment "!fw4: Masquerade {{ fw4.nfproto(family, true) }} {{ zone.name }} traffic"
++{%+ if (zone.masq_random): -%}
++    masquerade random {%+ endif -%}
++{%+ if (!zone.masq_random): -%}
++	masquerade {%+ endif -%}
++comment "!fw4: Masquerade {{ fw4.nfproto(family, true) }} {{ zone.name }} traffic"
++
+diff --git a/root/usr/share/ucode/fw4.uc b/root/usr/share/ucode/fw4.uc
+index b549488..cf99316 100644
+--- a/root/usr/share/ucode/fw4.uc
++++ b/root/usr/share/ucode/fw4.uc
+@@ -2000,6 +2000,7 @@ return {
+ 			forward: [ "policy", this.state.defaults ? this.state.defaults.forward : "drop" ],
+ 
+ 			masq: [ "bool" ],
++			masq_random: [ "bool" ],
+ 			masq_allow_invalid: [ "bool" ],
+ 			masq_src: [ "network", null, PARSE_LIST ],
+ 			masq_dest: [ "network", null, PARSE_LIST ],
+-- 
+2.17.1
+

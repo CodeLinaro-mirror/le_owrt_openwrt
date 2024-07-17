@@ -78,8 +78,8 @@ index 2d0767a..389226c 100644
  		}
  #endif
  
--		if (config.dad_forward && iface->master)
-+		if ((config.dad_forward && iface->master) || (iface->sta_bridge_mode))
+-		if (config.dad_forward && iface->master && iface->ndp != MODE_RELAY)
++		if ((config.dad_forward && iface->master && iface->ndp != MODE_RELAY) || (iface->sta_bridge_mode))
  		{
  			//need receive NA message from master in case DAD forward
  			if (setsockopt(iface->ndp_event.uloop.fd, SOL_SOCKET, SO_ATTACH_FILTER,

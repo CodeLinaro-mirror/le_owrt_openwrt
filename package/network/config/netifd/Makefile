@@ -44,6 +44,8 @@ define Package/netifd/install
 	$(CP) ./files/* $(1)/
 	$(INSTALL_DIR) $(1)/etc/udhcpc.user.d/
 	$(CP) $(PKG_BUILD_DIR)/scripts/* $(1)/lib/netifd/
+	chmod 0644 $(1)/lib/netifd/netifd-proto.sh
+
 endef
 
 $(eval $(call BuildPackage,netifd))

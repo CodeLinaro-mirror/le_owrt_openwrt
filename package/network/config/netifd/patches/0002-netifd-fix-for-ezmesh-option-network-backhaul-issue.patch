@@ -21,7 +21,7 @@ index c719f6f..f6c507a 100644
 -	if (!external && system_if_force_external(name))
 +        bool is_ezmesh_enabled = false;
 +
-+        if(!strncmp(name, "ath", strlen("ath")))
++        if(!strncmp(name, "ath", strlen("ath")) || !strncmp(name, "mld", strlen("mld")))
 +        {
 +            char result[100] = {'\0'};
 +            char *cmd = "uci get repacd.repacd.Ezmesh";

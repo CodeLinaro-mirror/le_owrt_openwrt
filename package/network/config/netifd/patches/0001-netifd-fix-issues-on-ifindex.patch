@@ -1,7 +1,13 @@
-From 8b39fa722f20ebf195f23605d4b66e14c60cb0ba Mon Sep 17 00:00:00 2001
-From: dhekum <quic_dhekum@quicinc.com>
-Date: Mon, 23 Jan 2023 10:47:41 +0800
-Subject: [PATCH] netifd: fix issues on ifindex
+This patch file is from Qualcomm Innovation Center, Inc. and is provided
+under the following license:
+
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+
+From a02f654e1730d2a52b71cba43162bace181e3f13 Mon Sep 17 00:00:00 2001
+From: ayukuma <quic_ayukuma@quicinc.com>
+Date: Mon, 22 Jul 2024 15:12:21 +0530
+Subject: [PATCH] ifindex_netifd_patch_02
 
 ifindex issue:
 1. after wlan device down and up, the ifindex may change
@@ -11,20 +17,19 @@ ifindex issue:
    it query ifindex but got 0 due race-condition.
    now, renew ifindex when found the ifindex is 0
 
-Change-Id: I97b724bb9078f3f8e045b2e3092c73c7bd5c5643
-Signed-off-by:quic_dhekum@quicinc.com
+Signed-off-by: Ayush Kumar<quic_ayukuma@quicinc.com>
 ---
- bridge.c       | 16 ++++++++++++++++
- device.c       | 39 ++++++++++++++++++++++++++++++++++++---
+ bridge.c       | 16 +++++++++++++++
+ device.c       | 39 ++++++++++++++++++++++++++++++++++---
  device.h       |  3 ++-
- system-linux.c | 38 +++++++++++++++++++++++++++++++++-----
- 4 files changed, 87 insertions(+), 9 deletions(-)
+ system-linux.c | 53 +++++++++++++++++++++++++++++++++++++-------------
+ 4 files changed, 93 insertions(+), 18 deletions(-)
 
 diff --git a/bridge.c b/bridge.c
-index dd4d2c1..c5605fb 100644
+index cc25c51..e08c248 100644
 --- a/bridge.c
 +++ b/bridge.c
-@@ -766,6 +766,22 @@ bridge_member_cb(struct device_user *dep, enum device_event ev)
+@@ -769,6 +769,22 @@ bridge_member_cb(struct device_user *dep, enum device_event ev)
  	case DEV_EVENT_AUTH_UP:
  		if (!bst->dev.active)
  			break;
@@ -48,7 +53,7 @@ index dd4d2c1..c5605fb 100644
  		if (bridge_enable_member(bm))
  			break;
 diff --git a/device.c b/device.c
-index ce4f9ff..474e15a 100644
+index f020cc0..84fe1fb 100644
 --- a/device.c
 +++ b/device.c
 @@ -153,10 +153,27 @@ void device_stp_init(void)
@@ -99,7 +104,7 @@ index ce4f9ff..474e15a 100644
  	} else {
  		system_if_down(dev);
  		system_if_apply_settings(dev, &dev->orig_settings, dev->orig_settings.flags);
-@@ -960,7 +985,7 @@ device_set_auth_status(struct device *dev, bool value, struct blob_attr *vlans)
+@@ -973,7 +998,7 @@ device_set_auth_status(struct device *dev, bool value, struct blob_attr *vlans)
  	device_broadcast_event(dev, DEV_EVENT_LINK_UP);
  }
  
@@ -108,7 +113,7 @@ index ce4f9ff..474e15a 100644
  {
  	if (dev->sys_present == state)
  		return;
-@@ -1455,5 +1480,13 @@ void device_hotplug_event(const char *name, bool add)
+@@ -1471,5 +1496,13 @@ void device_hotplug_event(const char *name, bool add)
  	if (!dev || dev->type != &simple_device_type)
  		return;
  
@@ -137,10 +142,10 @@ index b2ea0fa..dd9bdcb 100644
  void device_set_ifindex(struct device *dev, int ifindex);
  int device_set_ifname(struct device *dev, const char *name);
 diff --git a/system-linux.c b/system-linux.c
-index 72ad37b..cd837d1 100644
+index b6140cb..6adcd8d 100644
 --- a/system-linux.c
 +++ b/system-linux.c
-@@ -712,8 +712,10 @@ system_device_update_state(struct device *dev, unsigned int flags, unsigned int
+@@ -706,8 +706,10 @@ system_device_update_state(struct device *dev, unsigned int flags, unsigned int
  static int cb_rtnl_event(struct nl_msg *msg, void *arg)
  {
  	struct nlmsghdr *nh = nlmsg_hdr(msg);
@@ -152,7 +157,7 @@ index 72ad37b..cd837d1 100644
  	struct device *dev;
  
  	if (nh->nlmsg_type != RTM_NEWLINK)
-@@ -727,7 +729,15 @@ static int cb_rtnl_event(struct nl_msg *msg, void *arg)
+@@ -721,7 +723,15 @@ static int cb_rtnl_event(struct nl_msg *msg, void *arg)
  	if (!dev)
  		return 0;
  
@@ -169,7 +174,7 @@ index 72ad37b..cd837d1 100644
  	return 0;
  }
  
-@@ -738,7 +748,12 @@ handle_hotplug_msg(char *data, int size)
+@@ -732,7 +742,12 @@ handle_hotplug_msg(char *data, int size)
  	char *cur, *end, *sep;
  	int skip;
  	bool add;
@@ -182,7 +187,7 @@ index 72ad37b..cd837d1 100644
  	if (!strncmp(data, "add@", 4) || !strncmp(data, "move@", 5))
  		add = true;
  	else if (!strncmp(data, "remove@", 7))
-@@ -751,6 +766,9 @@ handle_hotplug_msg(char *data, int size)
+@@ -745,6 +760,9 @@ handle_hotplug_msg(char *data, int size)
  
  	for (cur = data + skip; cur < end; cur += skip) {
  		skip = strlen(cur) + 1;
@@ -192,7 +197,7 @@ index 72ad37b..cd837d1 100644
  
  		sep = strchr(cur, '=');
  		if (!sep)
-@@ -773,9 +791,12 @@ handle_hotplug_msg(char *data, int size)
+@@ -767,9 +785,12 @@ handle_hotplug_msg(char *data, int size)
  	if (!subsystem || !interface)
  		return;
  
@@ -206,26 +211,41 @@ index 72ad37b..cd837d1 100644
  	device_hotplug_event(interface, add);
  }
  
-@@ -952,10 +973,17 @@ retry:
- 	ret = 0;
- 	oldbr = system_get_bridge(dev->ifname, dev_buf, sizeof(dev_buf));
- 	if (!oldbr || strcmp(oldbr, bridge->ifname) != 0) {
+@@ -936,19 +957,23 @@ int system_bridge_addif(struct device *bridge, struct device *dev)
+ 	int tries = 0;
+ 	int ret;
+ 
+-
+-	for (tries = 0; tries < 3; tries++) {
+-		ret = 0;
+-		oldbr = system_get_bridge(dev->ifname, dev_buf, sizeof(dev_buf));
+-		if (oldbr && !strcmp(oldbr, bridge->ifname))
+-			break;
++retry:
++	ret = 0;
++	oldbr = system_get_bridge(dev->ifname, dev_buf, sizeof(dev_buf));
++	if (!oldbr || strcmp(oldbr, bridge->ifname) != 0) {
 +
 +		//retry set-ifindex to resolve racecondition that device not get ifindex
 +		if(dev->ifindex == 0) {
 +			device_set_ifindex(dev, system_if_resolve(dev));
 +			D(SYSTEM, "system_bridge_addif: try get ifindex(new:%d)", dev->ifindex);
 +		}
-+
+ 
  		ret = system_bridge_if(bridge->ifname, dev, SIOCBRADDIF, NULL);
- 		tries++;
+-		if (!ret)
+-			break;
+-
 -		D(SYSTEM, "Failed to add device '%s' to bridge '%s' (tries=%d): %s\n",
 -		  dev->ifname, bridge->ifname, tries, strerror(errno));
++		tries++;
 +		D(SYSTEM, "Failed to add device '%s'/(ifindex=%d) to bridge '%s' (tries=%d): %s\n",
 +		  dev->ifname, dev->ifindex, bridge->ifname, tries, strerror(errno));
- 		if (tries <= 3)
- 			goto retry;
++		if (tries <= 3)
++			goto retry;
  	}
+ 
+ 	if (dev->wireless)
 -- 
 2.17.1
 

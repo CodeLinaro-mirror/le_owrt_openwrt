@@ -325,10 +325,12 @@ TARGET_CONFIGURE_OPTS = \
   OBJDUMP=$(TARGET_CROSS)objdump \
   SIZE=$(TARGET_CROSS)size
 
-SIGN_KEY:= LD_LIBRARY_PATH=$(TOPDIR)/src/kernel-$(LINUX_VERSION)/kernel_platform/prebuilts/kernel-build-tools/linux-x86/lib64/ \
+#SIGN_KEY:= LD_LIBRARY_PATH=$(TOPDIR)/src/kernel-$(LINUX_VERSION)/kernel_platform/prebuilts/kernel-build-tools/linux-x86/lib64/ \
            $(TOPDIR)/src/kernel-$(LINUX_VERSION)/out/msm-kernel-$(KERNEL_PLATFORM_TARGET)-$(TARGET_VARIANT)_defconfig/msm-kernel/scripts/sign-file sha512 \
 	   $(TOPDIR)/src/kernel-$(LINUX_VERSION)/out/msm-kernel-$(KERNEL_PLATFORM_TARGET)-$(TARGET_VARIANT)_defconfig/msm-kernel/certs/signing_key.pem \
 	   $(TOPDIR)/src/kernel-$(LINUX_VERSION)/out/msm-kernel-$(KERNEL_PLATFORM_TARGET)-$(TARGET_VARIANT)_defconfig/msm-kernel/certs/signing_key.x509
+
+SIGN_KEY:=ls
 
 ifneq ($(CONFIG_NO_STRIP),)
   RSTRIP:=:

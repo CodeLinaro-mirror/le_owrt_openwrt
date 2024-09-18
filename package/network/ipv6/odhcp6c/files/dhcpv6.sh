@@ -125,6 +125,7 @@ proto_dhcpv6_setup() {
 	proto_export "INTERFACE=$config"
 	proto_run_command "$config" odhcp6c \
 		-s /lib/netifd/dhcpv6.script \
+		-r mtu \
 		$opts $iface
 }
 

@@ -34,14 +34,9 @@ endif
 ifneq ($(if $(DUMP),1,$(__quilt_inc)),1)
 __quilt_inc:=1
 
-<<<<<<< HEAD   (81ebbe Merge "owrt/openwrt: Implement centralized kernel module sig)
+FindPackage?=$(strip $(shell find $(TOPDIR)/openwrt-patches -name $(1) 2>/dev/null))
 PATCH_DIR?=$(CURDIR)/patches
 FILES_DIR?=$(CURDIR)/files
-=======
-FindPackage?=$(strip $(shell find $(TOPDIR)/openwrt-patches -name $(1) 2>/dev/null))
-PATCH_DIR?=./patches
-FILES_DIR?=./files
->>>>>>> CHANGE (22467f Provide support for patching from openwrt-patches)
 HOST_PATCH_DIR?=$(PATCH_DIR)
 HOST_FILES_DIR?=$(FILES_DIR)
 

@@ -1,7 +1,7 @@
 #!/bin/sh /etc/rc.common
 # Copyright (C) 2007-2012 OpenWrt.org
 
-START=19
+START=10
 
 USE_PROCD=1
 PROG=/usr/sbin/dnsmasq
@@ -527,11 +527,16 @@ dhcp_add() {
 		DNS_SERVERS="$DNS_SERVERS $dnsserver"
 	}
 
-	append_bool "$cfg" ignore "--no-dhcp-interface=$ifname" && {
-		# Many ISP do not have useful names for DHCP customers (your WAN).
-		dhcp_this_host_add "$net" "$ifname" "$ADD_WAN_FQDN"
-		return 0
-	}
+	local dhcp_proxy
+	config_get dhcp_proxy "$cfg" dhcp_proxy
+
+	if [ "$dhcp_proxy" != "1" ]; then
+		append_bool "$cfg" ignore "--no-dhcp-interface=$ifname" && {
+			# Many ISP do not have useful names for DHCP customers (your WAN).
+			dhcp_this_host_add "$net" "$ifname" "$ADD_WAN_FQDN"
+			return 0
+		}
+	fi
 
 	network_get_subnet subnet "$net" || return 0
 	network_get_protocol proto "$net" || return 0
@@ -803,6 +808,13 @@ dhcp_relay_add() {
 	else
 		network_get_device ifname "$interface" || return
 		xappend "--dhcp-relay=$local_addr,$server_addr,$ifname"
+	fi
+
+	local dhcp_proxy
+	config_get dhcp_proxy "$cfg" dhcp_proxy
+
+	if [ $dhcp_proxy == 1 ]; then
+		xappend "--dhcp-proxy"
 	fi
 }
 
@@ -1212,12 +1224,12 @@ dnsmasq_start()
 	[ -n "$instance_ifc" ] && network_get_device instance_netdev "$instance_ifc" &&
 		[ -n "$instance_netdev" ] && procd_set_param netdev $instance_netdev
 
-	procd_add_jail dnsmasq ubus log
-	procd_add_jail_mount $CONFIGFILE $DHCPBOGUSHOSTNAMEFILE $DHCPSCRIPT $DHCPSCRIPT_DEPENDS
-	procd_add_jail_mount $EXTRA_MOUNT $RFC6761FILE $TRUSTANCHORSFILE
-	procd_add_jail_mount $dnsmasqconffile $dnsmasqconfdir $resolvdir $user_dhcpscript
-	procd_add_jail_mount /etc/passwd /etc/group /etc/TZ /etc/hosts /etc/ethers
-	procd_add_jail_mount_rw /var/run/dnsmasq/ $leasefile
+       #procd_add_jail dnsmasq ubus log
+       #procd_add_jail_mount $CONFIGFILE $DHCPBOGUSHOSTNAMEFILE $DHCPSCRIPT $DHCPSCRIPT_DEPENDS
+       #procd_add_jail_mount $EXTRA_MOUNT $RFC6761FILE $TRUSTANCHORSFILE
+       #procd_add_jail_mount $dnsmasqconffile $dnsmasqconfdir $resolvdir $user_dhcpscript
+       #procd_add_jail_mount /etc/passwd /etc/group /etc/TZ /etc/hosts /etc/ethers
+       #procd_add_jail_mount_rw /var/run/dnsmasq/ $leasefile
 	case "$logfacility" in */*)
 		[ ! -e "$logfacility" ] && touch "$logfacility"
 		procd_add_jail_mount_rw "$logfacility"
@@ -1273,6 +1285,7 @@ start_service() {
 	local instance_found=0
 	local first_instance=""
 
+        mkdir -p /tmp/data
 	. /lib/functions/network.sh
 
 	config_cb() {

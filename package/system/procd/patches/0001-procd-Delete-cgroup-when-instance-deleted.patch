@@ -1,0 +1,61 @@
+From 55132dcc4b3665db33f9f2bfcd49b8443aed1504 Mon Sep 17 00:00:00 2001
+From: Bulbul Dabi <quic_bdabi@quicinc.com>
+Date: Thu, 17 Oct 2024 10:03:19 +0530
+Subject: [PATCH] procd: Delete cgroup when instance deleted
+
+Delete cgroup for test service only when the instance is
+deleted.
+
+Change-Id: Ia9ae41b6469202d6b5c1fbd487c26f41f235367b
+Signed-off-by: Bulbul Dabi <quic_bdabi@quicinc.com>
+---
+ service/instance.c | 26 +++++++++++++++++++++++++-
+ 1 file changed, 25 insertions(+), 1 deletion(-)
+
+diff --git a/service/instance.c b/service/instance.c
+index ed5d0a4..2f2374f 100644
+--- a/service/instance.c
++++ b/service/instance.c
+@@ -790,14 +790,38 @@ instance_timeout(struct uloop_timeout *t)
+ 		instance_start(in);
+ }
+ 
++static void
++instance_remove_cgroup(const char *sn, const char *in)
++{
++	char cgnamebuf[256];
++	const char *prefix = "test_";
++	LOG("service name: %s::%s", sn, in);
++
++	if (strncmp(sn, prefix, strlen(prefix)) == 0)
++	{
++		snprintf(cgnamebuf, sizeof(cgnamebuf), "%s/%s/%s", CGROUP_BASEDIR, sn, in);
++		if(rmdir(cgnamebuf)==0)
++			LOG("Removed dir: %s/%s/%s", CGROUP_BASEDIR, sn, in);
++		else
++			LOG("couldnt remove dir : %s/%s", sn, in);
++
++		if(rmdir(dirname(cgnamebuf))==0)
++			LOG("Removed dir: %s/%s", CGROUP_BASEDIR, sn);
++		else
++			LOG("Couldnt remove dir : %s/%s", CGROUP_BASEDIR, sn);
++	}
++}
++
+ static void
+ instance_delete(struct service_instance *in)
+ {
+ 	struct service *s = in->srv;
+-
++	const char *sname = in->srv->name;
++	const char *iname = in->name;
+ 	avl_delete(&s->instances.avl, &in->node.avl);
+ 	instance_free(in);
+ 	service_stopped(s);
++	instance_remove_cgroup(sname, iname);
+ }
+ 
+ static int
+-- 
+2.25.1
+

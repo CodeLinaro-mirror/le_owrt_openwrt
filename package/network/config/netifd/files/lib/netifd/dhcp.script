@@ -119,6 +119,7 @@ setup_backhaul() {
 	echo "export NETMASK=\"$subnet\""    >> /tmp/ipv4config.$INTERFACE
 	echo "export DNSSERVERS=\"$dns\""    >> /tmp/ipv4config.$INTERFACE
 	echo "export GATEWAY=\"$router\""    >> /tmp/ipv4config.$INTERFACE
+	echo "export IPV4MTU=\"$mtu\""       >> /tmp/ipv4config.$INTERFACE
 
 	echo " setup_backhaul for /tmp/ipv4config.$INTERFACE"
 

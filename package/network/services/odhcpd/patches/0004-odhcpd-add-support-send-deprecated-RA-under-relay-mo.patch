@@ -1,7 +1,7 @@
-From 47b59dfd88dbd0470bf8d36b863fb02f17744884 Mon Sep 17 00:00:00 2001
+From e1caeb389c4616996671b182cc921c642d410093 Mon Sep 17 00:00:00 2001
 From: HuaWen CHEN <quic_huawenc@quicinc.com>
 Date: Mon, 18 Mar 2024 22:08:45 +0800
-Subject: [PATCH 2/2] odhcpd: add support send deprecated RA under relay mode
+Subject: [PATCH] odhcpd: add support send deprecated RA under relay mode
 
 under relay mode:
 whenever forward RA from master interface, store it in locally,

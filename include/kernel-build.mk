@@ -204,10 +204,10 @@ endif
 
 ifneq ($(DISABLE_KERNEL_BUILD),1)
   compile: $(LINUX_DIR)/.modules
-	$(MAKE) -C image compile TARGET_BUILD=
+	+$(MAKE) -C image compile TARGET_BUILD=
 else
   compile:
-	$(MAKE) -C image compile TARGET_BUILD=
+	+$(MAKE) -C image compile TARGET_BUILD=
 endif
 
   dtb: $(STAMP_CONFIGURED)

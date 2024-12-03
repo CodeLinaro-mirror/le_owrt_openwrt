@@ -1,0 +1,33 @@
+From 2ccef68ed903339f9ec5e516ebfcaa38a4e1302e Mon Sep 17 00:00:00 2001
+From: Simon Kelley <simon@thekelleys.org.uk>
+Date: Wed, 30 Oct 2024 04:39:41 +0000
+Subject: [PATCH 2/2] Fix crash when reloading DHCP config on SIGHUP.
+
+Change-Id: I8b8a7ccebc1c29c6ea36c7714b013ccb16887d45
+Signed-off by: Kuruva, Jaya Krishna <quic_jkuruva@quicinc.com>
+---
+ option.c | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/src/option.c b/src/option.c
+index f4ff7c0..4ba8b67 100644
+--- a/src/option.c
++++ b/src/option.c
+@@ -1360,7 +1360,13 @@ static void dhcp_netid_list_free(struct dhcp_netid_list *netid)
+     {
+       struct dhcp_netid_list *tmplist = netid;
+       netid = netid->next;
+-      dhcp_netid_free(tmplist->list);
++      /* Note: don't use dhcp_netid_free() here, since that
++      frees a list linked on netid->next. Where a netid_list
++      is used that's because the the ->next pointers in the
++      netids are being used to temporarily construct
++      a list of valid tags. */
++      free(tmplist->list->net);
++      free(tmplist->list);
+       free(tmplist);
+     }
+ }
+-- 
+2.17.1
+

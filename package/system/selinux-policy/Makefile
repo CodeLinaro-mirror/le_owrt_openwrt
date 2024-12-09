@@ -43,6 +43,14 @@ ifeq ($(USER_VARIANT),0)
 	$(CP) $(LOCAL_SRC)/cil/file/execfile/test/*.cil $(PKG_BUILD_DIR)/src/
 	$(CP) $(LOCAL_SRC)/cil/file/execfile/user_debug/userdebug.cil $(PKG_BUILD_DIR)/src/
 endif
+ifeq ($(shell if [[ $(PKG_VERSION) > 1.2.5 || $(PKG_VERSION) = 1.2.5 ]]; then echo 1; fi), 1)
+	sed -i '5i(tunable procd_available true)' $(PKG_BUILD_DIR)/src/wifi-append.cil
+else
+	# Selinux-policy package version is 1.1 so procdexecfile.cil doesn't exist here
+	# so param is set to false
+	sed -i '5i(tunable procd_available false)' $(PKG_BUILD_DIR)/src/wifi-append.cil
+endif
+
 endef
 
 define Build/Compile

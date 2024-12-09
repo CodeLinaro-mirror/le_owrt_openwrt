@@ -276,6 +276,7 @@ setup_backhaul_v6() {
 	if [ "$DNSSERVERS6" != "$RDNSS" ]; then
 		ipv6_change=1
 	fi
+	echo "export IPV6MTU=\"$RA_MTU\""    >> /tmp/ipv6config.$intf_name
 
 	echo " setup_backhaul for /tmp/ipv6config.$intf_name"
 

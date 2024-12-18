@@ -1,0 +1,33 @@
+From 463225c8c201abf458df125f52fdadc15db1b3b4 Mon Sep 17 00:00:00 2001
+From: Kannan Saravanan <quic_kannsara@quicinc.com>
+Date: Sun, 9 Feb 2025 13:09:43 +0530
+Subject: [PATCH] iw: Fix compilation issue for iw-full
+
+Fix compilation issue for iw-full variant.
+
+Change-Id: I931f9d622d9fc43b7178052ec350fe1b338a15fd
+Signed-off-by: Kannan Saravanan <quic_kannsara@quicinc.com>
+---
+ info.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/info.c b/info.c
+index ce1c527..7e9860f 100644
+--- a/info.c
++++ b/info.c
+@@ -806,9 +806,11 @@ next:
+ 		}
+ 	if (tb_msg[NL80211_ATTR_TDLS_SUPPORT])
+ 	       printf("\tDevice supports T-DLS.\n");
++#ifdef IW_FULL
++               unsigned int features = nla_get_u32(tb_msg[NL80211_ATTR_FEATURE_FLAGS]);
+ 	       if (features & NL80211_FEATURE_TDLS_CHANNEL_SWITCH)
+ 		       printf("\tDevice supports TDLS channel switching\n");
+-
++#endif
+ 	}
+ 
+ 	if (tb_msg[NL80211_ATTR_WOWLAN_TRIGGERS_SUPPORTED]) {
+-- 
+2.34.1
+

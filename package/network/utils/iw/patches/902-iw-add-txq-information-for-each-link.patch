@@ -1,0 +1,84 @@
+From 19a92293eee547821a9c6e542e3235743cb4800f Mon Sep 17 00:00:00 2001
+From: Nandha Kishore Easwaran <quic_nandhaki@quicinc.com>
+Date: Thu, 24 Oct 2024 15:10:38 +0530
+Subject: [PATCH] iw: add txq information for each link
+
+Add tx queue information for each link from driver and display them
+within each link id group
+
+Signed-off-by: Nandha Kishore Easwaran <quic_nandhaki@quicinc.com>
+---
+ interface.c | 19 +++++++++++++------
+ station.c   |  4 ++--
+ 2 files changed, 15 insertions(+), 8 deletions(-)
+
+diff --git a/interface.c b/interface.c
+index c01cadd..ded50c6 100644
+--- a/interface.c
++++ b/interface.c
+@@ -510,6 +510,17 @@ char *channel_width_name(enum nl80211_chan_width width)
+ 	}
+ }
+ 
++static void print_txq_stats(struct nlattr *tb_msg[], const char *space)
++{
++	char buf[150];
++
++	if (tb_msg[NL80211_ATTR_TXQ_STATS]) {
++		parse_txq_stats(buf, sizeof(buf),
++				tb_msg[NL80211_ATTR_TXQ_STATS], 1, -1, space);
++		printf("\t\t%smulticast TXQ:%s\n", space, buf);
++	}
++}
++
+ static void print_channel_txpower(struct nlattr *tb_msg[], const char *space)
+ {
+ 	if (tb_msg[NL80211_ATTR_WIPHY_FREQ]) {
+@@ -588,12 +599,6 @@ static int print_iface_handler(struct nl_msg *msg, void *arg)
+ 	if (!wiphy && tb_msg[NL80211_ATTR_WIPHY])
+ 		printf("%s\twiphy %d\n", indent, nla_get_u32(tb_msg[NL80211_ATTR_WIPHY]));
+ 
+-	if (tb_msg[NL80211_ATTR_TXQ_STATS]) {
+-		char buf[150];
+-		parse_txq_stats(buf, sizeof(buf), tb_msg[NL80211_ATTR_TXQ_STATS], 1, -1, indent);
+-		printf("%s\tmulticast TXQ:%s\n", indent, buf);
+-	}
+-
+ 	if (tb_msg[NL80211_ATTR_4ADDR]) {
+ 		uint8_t use_4addr = nla_get_u8(tb_msg[NL80211_ATTR_4ADDR]);
+ 		if (use_4addr)
+@@ -613,10 +618,12 @@ static int print_iface_handler(struct nl_msg *msg, void *arg)
+ 					printf("%s\t  addr %s\n", indent, link_addr);
+ 				}
+ 				print_channel_txpower(link, "  ");
++				print_txq_stats(link, "  ");
+ 			}
+ 		}
+ 	} else {
+ 		print_channel_txpower(tb_msg, "");
++		print_txq_stats(tb_msg, "");
+ 	}
+ 
+ 	return NL_SKIP;
+diff --git a/station.c b/station.c
+index aabc0ab..4fd77bf 100644
+--- a/station.c
++++ b/station.c
+@@ -67,12 +67,12 @@ int parse_txq_stats(char *buf, int buflen, struct nlattr *tid_stats_attr, int he
+ 	}
+ 
+ 	if (header)
+-		pos += snprintf(buf, buflen, "\n%s\t%s\tqsz-byt\t"
++		pos += snprintf(buf, buflen, "\n%s\t\t%s\tqsz-byt\t"
+ 				"qsz-pkt\tflows\tdrops\tmarks\toverlmt\t"
+ 				"hashcol\ttx-bytes\ttx-packets", indent,
+ 				tid >= 0 ? "TID" : "");
+ 
+-	pos += snprintf(pos, buflen - (pos - buf), "\n%s\t", indent);
++	pos += snprintf(pos, buflen - (pos - buf), "\n%s\t\t", indent);
+ 	if (tid >= 0)
+ 		pos += snprintf(pos, buflen - (pos - buf), "%d", tid);
+ 
+-- 
+2.34.1
+

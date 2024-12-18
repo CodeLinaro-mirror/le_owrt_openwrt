@@ -1,0 +1,143 @@
+From 435377681f5646ca48ec8a8d5160ac16aaef0fe3 Mon Sep 17 00:00:00 2001
+From: Shwetha G K <quic_kshwetha@quicinc.com>
+Date: Mon, 5 Feb 2024 15:01:36 +0530
+Subject: [PATCH] iw: Add iw support to add/remove link interfaces
+
+Changes to support addition & removal of link interfaces
+
+Signed-off-by: Shwetha G K <quic_kshwetha@quicinc.com>
+---
+ interface.c | 110 ++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 110 insertions(+)
+
+diff --git a/interface.c b/interface.c
+index 6f1e6d6..3b8d30f 100644
+--- a/interface.c
++++ b/interface.c
+@@ -347,6 +347,71 @@ COMMAND(interface, add, "<name> type <type> [mesh_id <meshid>] [4addr on|off] [f
+ COMMAND(interface, add, "<name> type <type> [mesh_id <meshid>] [4addr on|off] [flags <flag>*] [addr <mac-addr>]",
+ 	NL80211_CMD_NEW_INTERFACE, 0, CIB_NETDEV, handle_interface_add, NULL);
+ 
++static int
++handle_interface_addlink(struct nl80211_state *state,
++			 struct nl_msg *msg,
++			 int argc, char **argv,
++			 enum id_input id)
++{
++	unsigned char mac_addr[ETH_ALEN];
++	int found_mac = 0;
++	int found_link_id = 0;
++	uint8_t link_id = 0;
++	char *end;
++
++	if (argc < 1)
++		return 1;
++
++try_another:
++	if (argc) {
++		if (strcmp(argv[0], "addr") == 0) {
++			argc--;
++			argv++;
++
++			if (mac_addr_a2n(mac_addr, argv[0])) {
++				fprintf(stderr, "Invalid MAC address\n");
++				return 2;
++			}
++
++			argc--;
++			argv++;
++
++			found_mac = 1;
++			goto try_another;
++		} else if (strcmp(argv[0], "link_id") == 0) {
++			argc--;
++			argv++;
++
++			link_id = (unsigned char)strtoul(argv[0], &end, 10);
++			if (*end != '\0') {
++				fprintf(stderr, "invalid link id");
++				return 2;
++			}
++
++			argc--;
++			argv++;
++
++			found_link_id = 1;
++			goto try_another;
++		} else {
++			return 1;
++		}
++	}
++
++	if (argc)
++		return 1;
++
++	if (found_link_id)
++		nla_put_u8(msg, NL80211_ATTR_MLO_LINK_ID, link_id);
++	if (found_mac)
++		nla_put(msg, NL80211_ATTR_MAC, ETH_ALEN, mac_addr);
++
++	return 0;
++}
++
++COMMAND(interface, addlink, "link_id <id> [addr <mac-addr>] ",
++	NL80211_CMD_ADD_LINK, 0, CIB_NETDEV, handle_interface_addlink, NULL);
++
+ static int handle_interface_del(struct nl80211_state *state,
+ 				struct nl_msg *msg,
+ 				int argc, char **argv,
+@@ -358,6 +423,51 @@ TOPLEVEL(del, NULL, NL80211_CMD_DEL_INTERFACE, 0, CIB_NETDEV, handle_interface_d
+ 	 "Remove this virtual interface");
+ HIDDEN(interface, del, NULL, NL80211_CMD_DEL_INTERFACE, 0, CIB_NETDEV, handle_interface_del);
+ 
++static int handle_interface_dellink(struct nl80211_state *state,
++				    struct nl_msg *msg,
++				    int argc, char **argv,
++				    enum id_input id)
++{
++	int found_link_id = 0;
++	uint8_t link_id = 0;
++	char *end;
++
++	if (argc < 1)
++		return 1;
++
++try_another:
++	if (argc) {
++		if (strcmp(argv[0], "link_id") == 0) {
++			argc--;
++			argv++;
++
++			link_id = (unsigned char)strtoul(argv[0], &end, 10);
++			if (*end != '\0') {
++				fprintf(stderr, "invalid link id");
++				return 2;
++			}
++
++			argc--;
++			argv++;
++
++			found_link_id = 1;
++			goto try_another;
++		} else {
++			return 1;
++		}
++	}
++
++	if (argc)
++		return 1;
++
++	if (found_link_id)
++		nla_put_u8(msg, NL80211_ATTR_MLO_LINK_ID, link_id);
++
++	return 0;
++}
++COMMAND(interface, dellink, "link_id <id>", NL80211_CMD_REMOVE_LINK, 0,
++	CIB_NETDEV, handle_interface_dellink, NULL);
++
+ static char *channel_type_name(enum nl80211_channel_type channel_type)
+ {
+ 	switch (channel_type) {
+-- 
+2.17.1
+

@@ -1,0 +1,104 @@
+From 99e6cfc802fa06558fd666eee6805c37194fa2c5 Mon Sep 17 00:00:00 2001
+From: HuaWen CHEN <quic_huawenc@quicinc.com>
+Date: Thu, 19 Dec 2024 18:27:54 +0800
+Subject: [PATCH] odhcpd: support master-slave mapping between wan-lan
+
+Signed-off-by: HuaWen CHEN <quic_huawenc@quicinc.com>
+---
+ src/config.c | 13 +++++++++++++
+ src/odhcpd.h |  3 +++
+ src/router.c | 12 ++++++++++++
+ 3 files changed, 28 insertions(+)
+
+diff --git a/src/config.c b/src/config.c
+index ccaed7d..1cfc668 100644
+--- a/src/config.c
++++ b/src/config.c
+@@ -95,6 +95,7 @@ enum {
+ 	IFACE_ATTR_NTP,
+ 	IFACE_ATTR_STA_BRIDGE_MODE,
+ 	IFACE_ATTR_QCMAP_PREFIX_DELEGATION_MODE,
++	IFACE_ATTR_MASTER_DHCP,
+ 	IFACE_ATTR_MAX
+ };
+ 
+@@ -150,6 +151,7 @@ static const struct blobmsg_policy iface_attrs[IFACE_ATTR_MAX] = {
+ 	[IFACE_ATTR_NTP] = { .name = "ntp", .type = BLOBMSG_TYPE_ARRAY },
+ 	[IFACE_ATTR_STA_BRIDGE_MODE] = { .name = "sta_bridge_mode", .type = BLOBMSG_TYPE_BOOL },
+ 	[IFACE_ATTR_QCMAP_PREFIX_DELEGATION_MODE] = { .name = "qcmap_prefix_delegation_mode", .type = BLOBMSG_TYPE_INT32 },
++	[IFACE_ATTR_MASTER_DHCP] = { .name = "master_dhcp", .type = BLOBMSG_TYPE_STRING },
+ };
+ 
+ static const struct uci_blob_param_info iface_attr_info[IFACE_ATTR_MAX] = {
+@@ -273,6 +275,7 @@ static void close_interface(struct interface *iface)
+ 	free(iface->addr6);
+ 	free(iface->invalid_addr6);
+ 	free(iface->ifname);
++	if(iface->master_dhcp_name)	 free(iface->master_dhcp_name);
+ 	free(iface);
+ }
+ 
+@@ -1108,6 +1111,16 @@ int config_parse_interface(void *data, size_t len, const char *name, bool overwr
+ 	if ((c = tb[IFACE_ATTR_QCMAP_PREFIX_DELEGATION_MODE]))
+ 		iface->qcmap_prefix_delegation_mode = blobmsg_get_u32(c);
+ 
++	if ((c = tb[IFACE_ATTR_MASTER_DHCP]))
++	{
++		if(iface->master_dhcp_name)
++		{
++				free(iface->master_dhcp_name);
++		}
++		ifname = blobmsg_get_string(c);
++		iface->master_dhcp_name = strdup(ifname);
++	}
++
+ 	return 0;
+ 
+ err:
+diff --git a/src/odhcpd.h b/src/odhcpd.h
+index ffcbad5..980c2be 100644
+--- a/src/odhcpd.h
++++ b/src/odhcpd.h
+@@ -402,6 +402,9 @@ struct interface {
+ 	// 2: IDU Prefix Delegation, use DHCPv6/Prefix-Delegation
+ 	uint32_t qcmap_prefix_delegation_mode;
+ 
++	//master dhcp section name.
++	char *master_dhcp_name;
++
+ };
+ 
+ extern struct avl_tree interfaces;
+diff --git a/src/router.c b/src/router.c
+index 79a8ad4..27d5b8f 100644
+--- a/src/router.c
++++ b/src/router.c
+@@ -1316,6 +1316,12 @@ static void handle_icmpv6(void *addr, void *data, size_t len,
+ 				if (!c->master || c->ra != MODE_RELAY)
+ 					continue;
+ 
++				if(iface->master_dhcp_name != 0 && strcmp(c->name, iface->master_dhcp_name) != 0)
++				{
++					syslog(LOG_ERR, "client need use master %s only, will not use %s", iface->master_dhcp_name, c->name);
++					continue;
++				}
++
+ 				if(c->addr6_len == 0)
+ 				{
+ 					syslog(LOG_ERR, "master iface have no valid IPv6 addr, ignore forward RS");
+@@ -1407,6 +1413,12 @@ static void forward_router_advertisement(const struct interface *iface, uint8_t
+ 		if (c == iface || c->ra != MODE_RELAY || c->master)
+ 			continue;
+ 
++		if(c->master_dhcp_name != 0 && strcmp(c->master_dhcp_name, iface->name) != 0)
++		{
++			syslog(LOG_ERR, "ignore forward RA from from %s to lan client %s ", iface->name, c->name);
++			continue;
++		}
++
+ 		/* Fixup source hardware address option */
+ 		if (mac_ptr)
+ 			odhcpd_get_mac(c, mac_ptr);
+-- 
+2.40.0.windows.1
+

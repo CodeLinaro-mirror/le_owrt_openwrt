@@ -50,9 +50,9 @@ index ed5d0a4..2f2374f 100644
 +	const char *sname = in->srv->name;
 +	const char *iname = in->name;
  	avl_delete(&s->instances.avl, &in->node.avl);
++	instance_remove_cgroup(sname, iname);
  	instance_free(in);
  	service_stopped(s);
-+	instance_remove_cgroup(sname, iname);
  }
  
  static int

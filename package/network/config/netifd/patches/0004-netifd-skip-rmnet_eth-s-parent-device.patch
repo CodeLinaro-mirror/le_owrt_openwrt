@@ -1,26 +1,27 @@
-From d7fe0a14b673375115ee8e6fc3c65d2a4a5d5fe5 Mon Sep 17 00:00:00 2001
+From e0ddb065eb08ef275052ce37fdf37b07aed1a8f6 Mon Sep 17 00:00:00 2001
 From: HuaWen CHEN <quic_huawenc@quicinc.com>
-Date: Thu, 10 Oct 2024 20:18:32 +0800
-Subject: [PATCH] netifd: skip rmnet_eth's parent device
+Date: Thu, 21 Nov 2024 13:45:39 +0800
+Subject: [PATCH] netifd: skip rmnet's parent device
 
-Signed-off-by:quic_huawenc@quicinc.com
+Signed-off-by: HuaWen CHEN <quic_huawenc@quicinc.com>
 ---
- device.c | 2 ++
- 1 file changed, 2 insertions(+)
+ device.c | 3 +++
+ 1 file changed, 3 insertions(+)
 
 diff --git a/device.c b/device.c
-index 113614e..ff3907b 100644
+index 113614e..3d8b40d 100644
 --- a/device.c
 +++ b/device.c
-@@ -215,9 +215,11 @@ simple_device_set_state(struct device *dev, bool state)
+@@ -215,9 +215,12 @@ simple_device_set_state(struct device *dev, bool state)
  
  	pdev = dev->parent.dev;
  	if (state && !pdev) {
-+	  if(strncmp(dev->ifname, "rmnet_eth", strlen("rmnet_eth")) != 0) {
++		if(strncmp(dev->ifname, "rmnet_eth", strlen("rmnet_eth")) != 0 &&
++		   strncmp(dev->ifname, "rmnet_data", strlen("rmnet_data")) != 0) {
  		pdev = system_if_get_parent(dev);
  		if (pdev)
  			device_add_user(&dev->parent, pdev);
-+	  }
++		}
  	}
  
  	if (pdev) {

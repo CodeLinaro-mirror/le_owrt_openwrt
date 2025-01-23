@@ -1,0 +1,38 @@
+From 65bacb2ba8d7a87f4999f56603909628a4db6550 Mon Sep 17 00:00:00 2001
+From: Zijun Hu <quic_zijuhu@quicinc.com>
+Date: Thu, 31 Oct 2024 05:48:13 -0700
+Subject: [PATCH] Fix dlopen() crash
+
+Fix dlopen() crash with backtrace:
+
+// #0  0x0000007f8adfde4c in strlen (s=s@entry=0x7f7f853b72 <error: Cannot access memory at address 0x7f7f853b72>) at src/string/strlen.c:16
+// #1  0x0000007f8a79817c in get_cie_encoding (cie=cie@entry=0x7f7f853b69)
+    at owrt/build_dir/toolchain-aarch64_cortex-a53_gcc-13.3.0_musl/gcc-13.3.0/libgcc/unwind-dw2-fde.c:352
+// #2  0x0000007f8a7982e0 in classify_object_over_fdes (ob=0x7f8988b0c8 <object>, this_fde=0x7f89873b64, range=0x7f898ad360)
+    at owrt/build_dir/toolchain-aarch64_cortex-a53_gcc-13.3.0_musl/gcc-13.3.0/libgcc/unwind-dw2-fde.c:747
+// #3  0x0000007f8a7997f0 in register_pc_range_for_object (begin=<optimized out>, ob=0x7f8988b0c8 <object>)
+    at owrt/build_dir/toolchain-aarch64_cortex-a53_gcc-13.3.0_musl/gcc-13.3.0/libgcc/unwind-dw2-fde.c:118
+// #4  0x0000007f8ae0c130 in do_init_fini (queue=<optimized out>) at ldso/dynlink.c:1608
+....
+
+Signed-off-by: Zijun Hu <quic_zijuhu@quicinc.com>
+---
+ libgcc/unwind-dw2-fde.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/libgcc/unwind-dw2-fde.c b/libgcc/unwind-dw2-fde.c
+index 6a54450253f2..15b8a8b67e52 100644
+--- a/libgcc/unwind-dw2-fde.c
++++ b/libgcc/unwind-dw2-fde.c
+@@ -42,6 +42,8 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
+ #endif
+ #endif
+ 
++#undef ATOMIC_FDE_FAST_PATH
++
+ typedef __UINTPTR_TYPE__ uintptr_type;
+ 
+ #ifdef ATOMIC_FDE_FAST_PATH
+-- 
+2.34.1
+

@@ -51,7 +51,11 @@ BASE_FEED:=$(if $(BASE_FEED),$(BASE_FEED),src-git-full base $(PROJECT_GIT)/openw
 
 KDIR_BASE = $(patsubst $(TOPDIR)/%,%,$(KERNEL_BUILD_DIR))
 KDIR_ARCHES = $(LINUX_KARCH)
+ifeq ($(QLITarget), 1)
+KERNEL_SRC = src/kernel-$(LINUX_VERSION)/kernel_platform/kernel
+else
 KERNEL_SRC = src/kernel-$(LINUX_VERSION)/kernel_platform/msm-kernel
+endif
 
 # arch/arm64/ includes reference files in arch/arm/, so we'll need both
 ifeq ($(LINUX_KARCH),arm64)

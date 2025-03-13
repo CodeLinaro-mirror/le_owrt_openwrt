@@ -224,7 +224,10 @@ deconfig_backhaul_v6() {
 
 	echo " deconfig_backhaul for /tmp/ipv6config.$intf_name"
 	if [ -f /tmp/ipv6config.$intf_name ]; then
-	  /etc/data/backhaulCommonConfig.sh switch_bh_v6 $intf_name 0
+		if [[ "$intf_name" =~ ^waneth[0-9] ]]; then
+			/etc/data/lanUtils.sh util_delete_nonwwan_route_rule_v6 $intf_name
+		fi
+		/etc/data/backhaulCommonConfig.sh switch_bh_v6 $intf_name 0
 	fi
 	# File /tmp/ipv4config.$INTERFACE will be deleted by backhaulCommonConfig.sh
 
@@ -232,7 +235,7 @@ deconfig_backhaul_v6() {
 
 setup_backhaul_v6() {
 	local intf_name=${INTERFACE%_v6*}
-	local device_name=`uci get network.$INTERFACE.device`
+	local device_name="$1"
 	local ipv6_change=0
 
 	if [ -f /tmp/ipv6config.$intf_name ]; then
@@ -281,6 +284,9 @@ setup_backhaul_v6() {
 	echo " setup_backhaul for /tmp/ipv6config.$intf_name"
 
 	if [ $ipv6_change == 1 ]; then
+		if [[ "$intf_name" =~ ^waneth[0-9] ]]; then
+			/etc/data/lanUtils.sh util_setup_nonwwan_route_rule_v6 $intf_name
+		fi
 		/etc/data/backhaulCommonConfig.sh switch_bh_v6 $intf_name 1
 	fi
 }
@@ -290,14 +296,14 @@ case "$2" in
 		teardown_interface "$1"
 		deconfig_backhaul_v6
 		setup_interface "$1"
-		setup_backhaul_v6
+		setup_backhaul_v6 "$1"
 	;;
 	informed|updated|rebound)
 		setup_interface "$1"
-		setup_backhaul_v6
+		setup_backhaul_v6 "$1"
 	;;
 	ra-updated)
-		[ -n "$ADDRESSES$RA_ADDRESSES$PREFIXES$USERPREFIX" ] && setup_interface "$1" && setup_backhaul_v6
+		[ -n "$ADDRESSES$RA_ADDRESSES$PREFIXES$USERPREFIX" ] && setup_interface "$1" && setup_backhaul_v6 "$1"
 	;;
 	started|stopped|unbound)
 		teardown_interface "$1"

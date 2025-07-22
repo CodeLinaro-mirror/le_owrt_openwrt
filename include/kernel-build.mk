@@ -53,7 +53,7 @@ define Kernel/Configure
 	#ARCH=arm CROSS_COMPILE=arm-openwrt-linux-muslgnueabi- REAL_CC=$(TOOLCHAIN_DIR)/clang/bin/clang LD=$(TOOLCHAIN_DIR)/bin/arm-openwrt-linux-muslgnueabi-ld KERN_OUT=$(CONFIG_EXTERNAL_KERNEL_TREE) scripts/gki/generate_defconfig.sh vendor/sdxlemur-debug_defconfig; \
 
 #STEP 2: merge_config.sh: sdxlemur-debug_defconfig + overlayfs.cfg + selinux.cfg = arch/arm/configs/vendor/.config
-	ARCH=arm CROSS_COMPILE=arm-openwrt-linux-muslgnueabi- LD=$(TOOLCHAIN_DIR)/bin/arm-openwrt-linux-muslgnueabi-ld KERN_OUT=$(CONFIG_EXTERNAL_KERNEL_TREE) $(CONFIG_EXTERNAL_KERNEL_TREE)/scripts/kconfig/merge_config.sh -m -r -O $(CONFIG_EXTERNAL_KERNEL_TREE)/arch/arm/configs/ $(CONFIG_EXTERNAL_KERNEL_TREE)/arch/arm64/configs/qcom_defconfig $(TOPDIR)/owrt-qti-bsp/kernel-packages/linux-msm/files/overlayfs.cfg $(TOPDIR)/owrt-qti-bsp/kernel-packages/linux-msm/files/selinux.cfg $(TOPDIR)/owrt-qti-bsp/kernel-packages/linux-msm/files/security_hardening.cfg $(TOPDIR)/owrt-qti-conf/$(BOARD)/kernel_configs/$(PROFILE).config $(if $(filter debug,$(TARGET_VARIANT)),$(CONFIG_EXTERNAL_KERNEL_TREE)/arch/arm64/configs/qcom_debug.config) 1>&2; \
+	$(TOPDIR)/target/linux/$(BOARD)/image/generate_configs.sh $(CONFIG_TARGET_PROFILE) $(TARGET_VARIANT) $(TOPDIR) $(CONFIG_EXTERNAL_KERNEL_TREE) $(BOARD)
 
 #STEP 3: cp output config from step 2 to root kernel source tree/directory + make
 	cp $(CONFIG_EXTERNAL_KERNEL_TREE)/arch/arm/configs/.config $(CONFIG_EXTERNAL_KERNEL_TREE)/.config; \

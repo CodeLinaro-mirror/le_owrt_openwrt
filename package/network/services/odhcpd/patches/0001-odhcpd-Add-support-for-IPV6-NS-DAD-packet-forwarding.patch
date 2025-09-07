@@ -1,4 +1,4 @@
-From 489746d0488e0385cdd8c768a89e7013c399dabe Mon Sep 17 00:00:00 2001
+From a1f99b06afafa216a32c965d9c79271ac0b7f289 Mon Sep 17 00:00:00 2001
 From: HuaWen CHEN <quic_huawenc@quicinc.com>
 Date: Fri, 15 Mar 2024 12:53:27 +0800
 Subject: [PATCH] odhcpd: Add support for IPV6 NS DAD packet forwarding logic
@@ -9,9 +9,9 @@ towards Modem to address a potential IPv6 address conflict.
 Signed-off-by: aryamali <quic_aryamali@quicinc.com>
 ---
  src/config.c |   8 +-
- src/ndp.c    | 362 ++++++++++++++++++++++++++++++++++++++++++++++++++-
+ src/ndp.c    | 358 ++++++++++++++++++++++++++++++++++++++++++++++++++-
  src/odhcpd.h |  15 +++
- 3 files changed, 383 insertions(+), 2 deletions(-)
+ 3 files changed, 379 insertions(+), 2 deletions(-)
 
 diff --git a/src/config.c b/src/config.c
 index 1cd4608..dd3d950 100644
@@ -61,7 +61,7 @@ index 1cd4608..dd3d950 100644
  		INIT_LIST_HEAD(&iface->ia_assignments);
  		INIT_LIST_HEAD(&iface->dhcpv4_assignments);
 diff --git a/src/ndp.c b/src/ndp.c
-index dfbb111..7cea61c 100644
+index dfbb111..3fd6963 100644
 --- a/src/ndp.c
 +++ b/src/ndp.c
 @@ -29,6 +29,11 @@
@@ -247,7 +247,7 @@ index dfbb111..7cea61c 100644
 +	}
 +
 +	ifr.ifr_flags |= IFF_PROMISC;
-+	if (ioctl(iface->ndp_fd, SIOCGIFFLAGS, &ifr) < 0)
++	if (ioctl(iface->ndp_fd, SIOCSIFFLAGS, &ifr) < 0)
 +	{
 +		syslog(LOG_ERR, "Failed to set PROMISC mode: %m for ifname: %s, err num: %d",
 +						iface->ifname, errno);
@@ -261,7 +261,7 @@ index dfbb111..7cea61c 100644
 +	}
 +
 +	ifr.ifr_flags |= IFF_ALLMULTI;
-+	if (ioctl(iface->ndp_fd, SIOCGIFFLAGS, &ifr) < 0) {
++	if (ioctl(iface->ndp_fd, SIOCSIFFLAGS, &ifr) < 0) {
 +		syslog(LOG_ERR, "Failed to set IFF_ALLMULTI mode: %m for ifname: %s, err num: %d",
 +						iface->ifname, errno);
 +		ret = -1;
@@ -434,21 +434,7 @@ index dfbb111..7cea61c 100644
  	}
  
  	if (procfd >= 0)
-@@ -290,9 +591,13 @@ static void ping6(struct in6_addr *addr,
- 	inet_ntop(AF_INET6, addr, ipbuf, sizeof(ipbuf));
- 	syslog(LOG_DEBUG, "Pinging for %s on %s", ipbuf, iface->name);
- 
-+#if(0)
- 	netlink_setup_route(addr, 128, iface->ifindex, NULL, 128, true);
-+#endif
- 	odhcpd_send(iface->ndp_ping_fd, &dest, &iov, 1, iface);
-+#if(0)
- 	netlink_setup_route(addr, 128, iface->ifindex, NULL, 128, false);
-+#endif
- }
- 
- /* Send a Neighbor Advertisement. */
-@@ -350,17 +655,72 @@ static void handle_solicit(void *addr, void *data, size_t len,
+@@ -350,17 +651,72 @@ static void handle_solicit(void *addr, void *data, size_t len,
  			IN6_IS_ADDR_MULTICAST(&req->nd_ns_target))
  		return; /* Invalid target */
  

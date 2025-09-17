@@ -228,9 +228,8 @@ deconfig_backhaul_v6() {
 			/etc/data/lanUtils.sh util_delete_nonwwan_route_rule_v6 $intf_name
 		fi
 		/etc/data/backhaulCommonConfig.sh switch_bh_v6 $intf_name 0
+		rm /tmp/ipv6config.$intf_name
 	fi
-	# File /tmp/ipv4config.$INTERFACE will be deleted by backhaulCommonConfig.sh
-
 }
 
 setup_backhaul_v6() {

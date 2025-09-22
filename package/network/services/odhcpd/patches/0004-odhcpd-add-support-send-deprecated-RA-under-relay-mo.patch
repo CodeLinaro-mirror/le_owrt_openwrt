@@ -1,4 +1,4 @@
-From e1caeb389c4616996671b182cc921c642d410093 Mon Sep 17 00:00:00 2001
+From 042e650359feb4ec427da3aad04c70bddfc5f371 Mon Sep 17 00:00:00 2001
 From: HuaWen CHEN <quic_huawenc@quicinc.com>
 Date: Mon, 18 Mar 2024 22:08:45 +0800
 Subject: [PATCH] odhcpd: add support send deprecated RA under relay mode
@@ -173,5 +173,5 @@ index 3779c87..79a8ad4 100644
  
  		/* Fixup source hardware address option */
 -- 
-2.41.0.windows.3
+2.51.0.windows.1
 

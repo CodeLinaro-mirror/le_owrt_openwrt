@@ -2,13 +2,49 @@
 # Copyright (C) 2006 OpenWrt.org
 export INITRAMFS=1
 
+start_rdshell() {
+    echo "Starting ramdisk shell ... !"
+    exec /bin/sh
+}
+
+do_mounts()
+{
+    echo "mount sysfs"
+    mount -t sysfs sysfs /sys
+
+    echo "mount debugfs"
+    mount -t debugfs debugfs /sys/kernel/debug
+
+    echo "mount proc"
+    mount proc /proc -t proc
+}
+
 # switch to tmpfs to allow run daemons in jail on initramfs boot
 DIRS=$(echo *)
 NEW_ROOT=/new_root
+
+echo "executing init file"
 
 mkdir -p $NEW_ROOT
 mount -t tmpfs tmpfs $NEW_ROOT
 
 cp -pr $DIRS $NEW_ROOT
 
-exec switch_root $NEW_ROOT /sbin/init
+do_mounts
+
+mount -t devtmpfs devtmpfs /dev
+
+partition=$(cat /proc/cmdline | grep -o 'root=/dev/mmcblk[^ ]*' | cut -d= -f2)
+echo "system partition found at : "$partition
+if [ -z "$partition" ]; then
+    echo "No root partition specified, starting ramdisk shell"
+    start_rdshell
+fi
+
+mkdir -p /mnt/system
+echo "Mounting the system partition"
+sleep 3
+mount -v -t ext4 $partition /mnt/system || start_rdshell
+
+echo "Switching the system partition"
+exec switch_root /mnt/system /sbin/init || start_rdshell

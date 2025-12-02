@@ -362,7 +362,7 @@ TARGET_CONFIGURE_OPTS = \
   SIZE=$(TARGET_CROSS)size
 
 
-ifeq ($(BOARD), sdx85)
+ifeq ($(filter $(BOARD), sdx85 qmb415), $(BOARD))
     SIGN_KEY:= LD_LIBRARY_PATH=$(TOPDIR)/src/kernel-$(LINUX_VERSION)/out/msm-kernel-$(KERNEL_PLATFORM_TARGET)-$(TARGET_VARIANT)_defconfig/dist/openssl/lib64 \
           $(TOPDIR)/src/kernel-$(LINUX_VERSION)/out/msm-kernel-$(KERNEL_PLATFORM_TARGET)-$(TARGET_VARIANT)_defconfig/dist/sign-file sha512 \
           $(TOPDIR)/src/kernel-$(LINUX_VERSION)/out/msm-kernel-$(KERNEL_PLATFORM_TARGET)-$(TARGET_VARIANT)_defconfig/dist/signing_key.pem \

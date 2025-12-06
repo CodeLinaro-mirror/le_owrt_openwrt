@@ -2,8 +2,9 @@
 # Copyright (C) 2006 OpenWrt.org
 export INITRAMFS=1
 
+# Fallback interactive shell for recovery/debugging
 start_rdshell() {
-    echo "Starting ramdisk shell ... !"
+    echo "Starting ramdisk shell ...!"
     exec /bin/sh
 }
 
@@ -17,34 +18,61 @@ do_mounts()
 
     echo "mount proc"
     mount proc /proc -t proc
+
+    echo "mount devtmpfs"
+    mount -t devtmpfs devtmpfs /dev
 }
 
-# switch to tmpfs to allow run daemons in jail on initramfs boot
-DIRS=$(echo *)
-NEW_ROOT=/new_root
 
-echo "executing init file"
-
-mkdir -p $NEW_ROOT
-mount -t tmpfs tmpfs $NEW_ROOT
-
-cp -pr $DIRS $NEW_ROOT
+echo "Executing initramfs init file"
 
 do_mounts
 
-mount -t devtmpfs devtmpfs /dev
-
-partition=$(cat /proc/cmdline | grep -o 'root=/dev/mmcblk[^ ]*' | cut -d= -f2)
-echo "system partition found at : "$partition
-if [ -z "$partition" ]; then
-    echo "No root partition specified, starting ramdisk shell"
-    start_rdshell
-fi
-
 mkdir -p /mnt/system
-echo "Mounting the system partition"
-sleep 3
-mount -v -t ext4 $partition /mnt/system || start_rdshell
+
+# Try NAND/UBI path first: presence of /proc/mtd and at least 2 lines
+if [ -f /proc/mtd ] && [ `cat /proc/mtd | wc -l` -ge "2" ]; then
+    mtd_block_device=`cat /proc/mtd | grep -i system  | awk -F ':' '{print $1}'`
+    echo "Detected the mtd partition for system at :" $mtd_block_device
+    if [ -z "$mtd_block_device" ]; then
+        echo "No system partition found, fall back to ramdisk shell"
+        start_rdshell
+    fi
+    timeout=60
+    while [ ! -e /dev/ubi0_0 ]; do
+        echo "Waiting for UBI volume rootfs..."
+        sleep 1
+        timeout=$((timeout - 1))
+        if [ "$timeout" -le 0 ]; then
+            echo "Timeout waiting for UBI volume rootfs"
+            start_rdshell
+            break
+        fi
+    done
+    echo "Mounting the system partition"
+    mount -t ubifs -o ro ubi0:rootfs /mnt/system || start_rdshell
+else
+    # Try eMMC path: parse kernel cmdline for /mmcblk* block device
+    partition=$(cat /proc/cmdline | grep -o 'root=/dev/mmcblk[^ ]*' | cut -d= -f2)
+    echo "Detected system partition at : "$partition
+    if [ -z "$partition" ]; then
+        echo "No system partition found, fall back to ramdisk shell"
+        start_rdshell
+    fi
+    timeout=60
+    while [ ! -b $partition ]; do
+        echo "Waiting for $partition to appear..."
+        sleep 1
+        timeout=$((timeout - 1))
+        if [ $timeout -le 0 ]; then
+            echo "Timeout waiting for $partition"
+            start_rdshell
+            break
+        fi
+    done
+    echo "Mounting the system partition"
+    mount -t ext4 -o ro "$partition" /mnt/system || start_rdshell
+fi
 
 echo "Switching the system partition"
 exec switch_root /mnt/system /sbin/init || start_rdshell

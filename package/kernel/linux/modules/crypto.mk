@@ -966,8 +966,15 @@ define KernelPackage/crypto-sha1
 	CONFIG_CRYPTO_SHA1_OCTEON \
 	CONFIG_CRYPTO_SHA1_PPC_SPE \
 	CONFIG_CRYPTO_SHA1_SSSE3
-  FILES:=$(LINUX_DIR)/crypto/sha1_generic.ko
-  AUTOLOAD:=$(call AutoLoad,09,sha1_generic)
+ 
+ SHA1_MOD_FILE := $$(firstword \
+    $$(wildcard $(LINUX_DIR)/crypto/sha1.ko) \
+    $$(wildcard $(LINUX_DIR)/crypto/sha1_generic.ko))
+SHA1_MOD_NAME := $$(basename $$(notdir $$(SHA1_MOD_FILE)))
+ 
+  FILES := $$(SHA1_MOD_FILE)
+
+  AUTOLOAD:=$(call AutoLoad,09,$$(SHA1_MOD_NAME))
   $(call AddDepends/crypto)
 endef
 
@@ -1106,8 +1113,16 @@ define KernelPackage/crypto-sha512
 	CONFIG_CRYPTO_SHA512_ARM64 \
 	CONFIG_CRYPTO_SHA512_OCTEON \
 	CONFIG_CRYPTO_SHA512_SSSE3
-  FILES:=$(LINUX_DIR)/crypto/sha512_generic.ko
-  AUTOLOAD:=$(call AutoLoad,09,sha512_generic)
+  
+
+SHA512_MOD_FILE := $$(firstword \
+        $$(wildcard $(LINUX_DIR)/crypto/sha512.ko) \
+        $$(wildcard $(LINUX_DIR)/crypto/sha512_generic.ko))
+
+SHA512_MOD_NAME := $$(basename $$(notdir $$(SHA512_MOD_FILE)))
+
+ FILES:= $$(SHA512_MOD_FILE)
+ AUTOLOAD:= $(call AutoLoad,09,$$(SHA512_MOD_NAME)))
   $(call AddDepends/crypto)
 endef
 
@@ -1117,8 +1132,8 @@ define KernelPackage/crypto-sha512/arm
 endef
 
 define KernelPackage/crypto-sha512/aarch64
-  FILES+=$(LINUX_DIR)/arch/arm64/crypto/sha512-arm64.ko
-  AUTOLOAD+=$(call AutoLoad,09,sha512-arm64)
+ FILES+=$(if $(wildcard $(LINUX_DIR)/arch/arm64/crypto/sha512-arm64.ko),$(LINUX_DIR)/arch/arm64/crypto/sha512-arm64.ko) 
+ AUTOLOAD+=$(call AutoLoad,09,sha512-arm64)
 endef
 
 KernelPackage/crypto-sha512/imx/cortexa7=$(KernelPackage/crypto-sha512/arm)

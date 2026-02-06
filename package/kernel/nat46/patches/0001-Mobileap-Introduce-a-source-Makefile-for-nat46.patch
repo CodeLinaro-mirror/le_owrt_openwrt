@@ -1,0 +1,117 @@
+From a62756271b795a5dad9a272197668592134882d6 Mon Sep 17 00:00:00 2001
+From: Aslam Basha Mahammad <amahamma@qti.qualcomm.com>
+Date: Thu, 13 Nov 2025 00:04:14 +0530
+Subject: [PATCH] Mobileap Introduce a source Makefile for nat46
+Signed-off-by: Aslam Basha Mahammad <amahamma@qti.qualcomm.com>
+
+---
+ nat46/Makefile         | 53 ------------------------------------------
+ nat46/modules/Makefile | 31 ++++++++++++++++++++++--
+ 2 files changed, 29 insertions(+), 55 deletions(-)
+ delete mode 100644 nat46/Makefile
+
+diff --git a/nat46/Makefile b/nat46/Makefile
+deleted file mode 100644
+index daedbac..0000000
+--- a/nat46/Makefile
++++ /dev/null
+@@ -1,53 +0,0 @@
+-#
+-# Copyright (C) 2006-2012 OpenWrt.org
+-#
+-# This is free software, licensed under the GNU General Public License v2.
+-# See /LICENSE for more information.
+-#
+-
+-include $(TOPDIR)/rules.mk
+-include $(INCLUDE_DIR)/kernel.mk
+-
+-PKG_NAME:=nat46
+-PKG_VERSION:=0000000
+-
+-include $(INCLUDE_DIR)/package.mk
+-
+-define KernelPackage/nat46
+-  DEPENDS:=+kmod-ipv6
+-  TITLE:=Stateless NAT46 translation kernel module
+-  SECTION:=kernel
+-  SUBMENU:=Network Support
+-  FILES:=$(PKG_BUILD_DIR)/modules/nat46.ko 
+-endef
+-
+-
+-define Build/Prepare
+-	$(call Build/Prepare/Default)
+-	$(CP) -r ./* $(PKG_BUILD_DIR)/
+-endef
+-
+-
+-MAKE_KMOD := $(MAKE) -C "$(LINUX_DIR)" \
+-		CROSS_COMPILE="$(TARGET_CROSS)" \
+-		ARCH="$(LINUX_KARCH)" \
+-		PATH="$(TARGET_PATH)" \
+-		SUBDIRS="$(PKG_BUILD_DIR)/kmod" \
+-
+-define Build/Compile
+-	# Compile the kernel part
+-	$(MAKE_KMOD) \
+-		SUBDIRS="$(PKG_BUILD_DIR)/modules" \
+-		MODFLAGS="-DMODULE -mlong-calls" \
+-		modules
+-	pwd
+-endef
+-
+-define KernelPackage/nat46/install
+-	$(CP) -r ./files/* $(1)/
+-endef
+-
+-$(eval $(call KernelPackage,nat46))
+-
+-
+-
+diff --git a/nat46/modules/Makefile b/nat46/modules/Makefile
+index 9380882..0bde6cc 100644
+--- a/nat46/modules/Makefile
++++ b/nat46/modules/Makefile
+@@ -1,9 +1,36 @@
++ifeq ($(RELEASE_PACKAGE),1)
++EXTRA_CFLAGS+=-DRELEASE_PACKAGE
++endif
++LBITS ?= $(shell getconf LONG_BIT)
++ifeq ($(LBITS),64)
++CCFLAGS += -m64
++EXTRA_CFLAGS+=-DSYSTEM_IS_64
++else
++CCFLAGS += -m32
++endif
++
++M ?= $(shell pwd)
++
+ obj-m += nat46.o
+ nat46-objs := nat46-netdev.o nat46-module.o nat46-core.o nat46-glue.o
++
++nat46-y +=      nat46-netdev.o \
++                nat46-module.o \
++                nat46-core.o \
++                nat46-glue.o
++
+ CFLAGS_nat46.o := -DDEBUG
+
++KERNEL_SRC ?= /lib/modules/$(shell uname -r)/build
++
++KBUILD_OPTIONS := NAT46_ROOT=$(PWD)
++KBUILD_OPTIONS += MODNAME?=nat46
++
+ all:
+-	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
++	$(MAKE) -C $(KERNEL_SRC) M=$(M) modules $(KBUILD_OPTIONS)
++
++modules_install:
++	$(MAKE) -C $(KERNEL_SRC) M=$(M) modules_install
+
+ clean:
+-	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
++	$(MAKE) -C $(KERNEL_SRC) M=$(M) clean
+-- 
+2.34.1
+

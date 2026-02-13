@@ -1,4 +1,4 @@
-From 99e6cfc802fa06558fd666eee6805c37194fa2c5 Mon Sep 17 00:00:00 2001
+From 5eacae9fbff544bcfaa801323d3154922bb6c917 Mon Sep 17 00:00:00 2001
 From: HuaWen CHEN <quic_huawenc@quicinc.com>
 Date: Thu, 19 Dec 2024 18:27:54 +0800
 Subject: [PATCH] odhcpd: support master-slave mapping between wan-lan
@@ -100,5 +100,5 @@ index 79a8ad4..27d5b8f 100644
  		if (mac_ptr)
  			odhcpd_get_mac(c, mac_ptr);
 -- 
-2.40.0.windows.1
+2.51.0.windows.1
 

@@ -1,7 +1,7 @@
-From b38b1c4826ac0357a520736f40a586da5aaef918 Mon Sep 17 00:00:00 2001
+From efb7058cb1ecc9769451ccc5911e7aa9ae06b903 Mon Sep 17 00:00:00 2001
 From: aryamali <quic_aryamali@quicinc.com>
 Date: Tue, 1 Apr 2025 15:55:25 -0700
-Subject: [PATCH 1/1] odhcpd: removing IFF_RUNNING check
+Subject: [PATCH] odhcpd: removing IFF_RUNNING check
 
 Fix bug where odhcpd does not register br-lan when no clients are attached
 
@@ -11,10 +11,10 @@ Signed-off-by: aryamali <quic_aryamali@quicinc.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/src/config.c b/src/config.c
-index a61125f..0818ee7 100644
+index 1cfc668..5f9f3c0 100644
 --- a/src/config.c
 +++ b/src/config.c
-@@ -1401,7 +1401,7 @@ void odhcpd_reload(void)
+@@ -1413,7 +1413,7 @@ void odhcpd_reload(void)
  
  
  	avl_for_each_element_safe(&interfaces, i, avl, tmp) {
@@ -24,5 +24,5 @@ index a61125f..0818ee7 100644
  			if (i->dhcpv6 == MODE_HYBRID)
  				i->dhcpv6 = (master && master->dhcpv6 == MODE_RELAY) ?
 -- 
-2.34.1
+2.51.0.windows.1
 

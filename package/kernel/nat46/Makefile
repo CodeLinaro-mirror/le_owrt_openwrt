@@ -26,10 +26,26 @@ endef
 include $(INCLUDE_DIR)/kernel-defaults.mk
 
 define Build/Compile
-	$(KERNEL_MAKE) M="$(PKG_BUILD_DIR)/nat46/modules" \
+	$(CP) -r $(PKG_BUILD_DIR)/nat46/modules/* $(PKG_BUILD_DIR)
+	$(MAKE) -C "$(LINUX_DIR)" \
+		M="$(PKG_BUILD_DIR)" \
 		MODFLAGS="-DMODULE -mlong-calls" \
 		EXTRA_CFLAGS="-DNAT46_VERSION=\\\"$(PKG_SOURCE_VERSION)\\\"" \
 		modules
+endef
+
+define Build/InstallDev
+	$(INSTALL_DIR) $(STAGING_DIR)
+	$(INSTALL_DIR) $(1)/usr/include/nat46
+	$(INSTALL_DIR) $(STAGING_DIR)
+	$(INSTALL_DIR) $(1)/usr/include/nat46
+endef
+
+define KernelPackage/$(PKG_NAME)/install
+	$(INSTALL_DIR) $(1)/lib/modules/
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/$(PKG_NAME).ko $(1)/lib/modules/
+	$(INSTALL_DIR) $(TOPDIR)/bin/targets/$(TARGET_VARIANT)/modules
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/$(PKG_NAME).ko $(TOPDIR)/bin/targets/$(TARGET_VARIANT)/modules/
 endef
 
 $(eval $(call KernelPackage,nat46))

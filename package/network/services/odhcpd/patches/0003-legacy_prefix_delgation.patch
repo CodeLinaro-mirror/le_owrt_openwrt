@@ -1,4 +1,4 @@
-From e5311ead717136df8ef664508cb086d6c0399969 Mon Sep 17 00:00:00 2001
+From a2c83443faea378a98cb03dd7be8bafccd207e06 Mon Sep 17 00:00:00 2001
 From: HuaWen CHEN <quic_huawenc@quicinc.com>
 Date: Fri, 15 Mar 2024 13:11:30 +0800
 Subject: [PATCH] odhcpd: add support legacy_prefix_delgation
@@ -595,5 +595,5 @@ index 77249df..3779c87 100644
  	if (event->cb)
  		uloop_timeout_set(event, msecs);
 -- 
-2.41.0.windows.3
+2.51.0.windows.1
 

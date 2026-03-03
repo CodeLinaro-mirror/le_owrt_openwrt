@@ -200,6 +200,7 @@ define Package/base-files/install
 	mkdir -p \
 		$(1)/CONTROL \
 		$(1)/dev \
+		$(1)/dsp \
 		$(1)/etc/config \
 		$(1)/etc/crontabs \
 		$(1)/etc/rc.d \

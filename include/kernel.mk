@@ -152,6 +152,8 @@ PKG_EXTMOD_SUBDIRS ?= .
 
 PKG_SYMVERS_DIR = $(KERNEL_BUILD_DIR)/symvers
 
+ifeq ($(LINUX_VERSION),6.6)
+
 define collect_module_symvers
 	for subdir in $(PKG_EXTMOD_SUBDIRS); do \
 		realdir=$$$$(readlink -f $(PKG_BUILD_DIR)); \
@@ -163,6 +165,23 @@ define collect_module_symvers
 	mkdir -p $(PKG_SYMVERS_DIR); \
 	mv $(PKG_BUILD_DIR)/Module.symvers $(PKG_SYMVERS_DIR)/$(PKG_NAME).symvers
 endef
+
+else ifeq ($(LINUX_VERSION),6.18)
+
+define collect_module_symvers
+	sed 's/\.o//' $(PKG_BUILD_DIR)/modules.order > $(PKG_BUILD_DIR)/modules.list; \
+	for subdir in $(PKG_EXTMOD_SUBDIRS); do \
+		realdir=$$$$(readlink -f $(PKG_BUILD_DIR)); \
+		grep -F -f $(PKG_BUILD_DIR)/modules.list $(PKG_BUILD_DIR)/$$$$subdir/Module.symvers >> $(PKG_BUILD_DIR)/Module.symvers.tmp; \
+		[ "$(PKG_BUILD_DIR)" = "$$$$realdir" ] || \
+			grep -F $$$$realdir $(PKG_BUILD_DIR)/$$$$subdir/Module.symvers >> $(PKG_BUILD_DIR)/Module.symvers.tmp; \
+	done; \
+	sort -u $(PKG_BUILD_DIR)/Module.symvers.tmp > $(PKG_BUILD_DIR)/Module.symvers; \
+	mkdir -p $(PKG_SYMVERS_DIR); \
+	mv $(PKG_BUILD_DIR)/Module.symvers $(PKG_SYMVERS_DIR)/$(PKG_NAME).symvers
+endef
+
+endif
 
 define KernelPackage/hooks
   ifneq ($(PKG_NAME),kernel)

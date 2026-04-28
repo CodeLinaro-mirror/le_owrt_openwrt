@@ -26,11 +26,14 @@ proto_map_setup() {
 	local link="map-$cfg"
 
 	local maptype type legacymap mtu ttl tunlink zone encaplimit
-	local rule ipaddr ip4prefixlen ip6prefix ip6prefixlen peeraddr ealen psidlen psid offset
-	json_get_vars maptype type legacymap mtu ttl tunlink zone encaplimit
-	json_get_vars rule ipaddr ip4prefixlen ip6prefix ip6prefixlen peeraddr ealen psidlen psid offset
+	local rule ipaddr ip4prefixlen ip6prefix ip6prefixlen peeraddr ealen psidlen psid offset mode fmr
+	json_get_vars maptype type legacymap mtu ttl tunlink zone fmr mode encaplimit
+	json_get_vars ipaddr ip4prefixlen ip6prefix ip6prefixlen peeraddr ealen psidlen psid offset
+	json_get_values rule rule
 
-	[ "$zone" = "-" ] && zone=""
+	[ -z "$zone" ] && zone="wan"
+
+	echo "rule:$rule" >> /dev/kmsg
 
 	# Compatibility with older config: use $type if $maptype is missing
 	[ -z "$maptype" ] && maptype="$type"
@@ -52,6 +55,7 @@ proto_map_setup() {
 			rule="$rule,dmr=$peeraddr"
 		else
 			rule="$rule,br=$peeraddr"
+			[ $fmr = 1 ] && rule="$rule,fmr=1"
 		fi
 	fi
 
@@ -81,8 +85,14 @@ proto_map_setup() {
 		json_add_string mode ipip6
 		json_add_int mtu "${mtu:-1280}"
 		json_add_int ttl "${ttl:-64}"
-		json_add_string local $(eval "echo \$RULE_${k}_IPV6ADDR")
-		json_add_string remote $(eval "echo \$RULE_${k}_BR")
+		if [ "$mode" = br ]; then
+			json_add_string remote $(eval "echo \$RULE_${k}_IPV6ADDR")
+			json_add_string local $(eval "echo \$RULE_${k}_BR")
+		else
+		        json_add_string local $(eval "echo \$RULE_${k}_IPV6ADDR")
+		        json_add_string remote $(eval "echo \$RULE_${k}_BR")
+		fi
+
 		json_add_string link $(eval "echo \$RULE_${k}_PD6IFACE")
 		json_add_object "data"
 			[ -n "$encaplimit" ] && json_add_string encaplimit "$encaplimit"
@@ -132,6 +142,7 @@ proto_map_setup() {
 	[ -n "$zone" ] && json_add_string zone "$zone"
 
 	json_add_array firewall
+	if [ "$mode" != br ]; then
 	  if [ -z "$(eval "echo \$RULE_${k}_PORTSETS")" ]; then
 	    json_add_object ""
 	      json_add_string type nat
@@ -140,6 +151,7 @@ proto_map_setup() {
 	      json_add_string snat_ip $(eval "echo \$RULE_${k}_IPV4ADDR")
 	    json_close_object
 	  else
+	    network_get_device ifname "lan"
 	    for portset in $(eval "echo \$RULE_${k}_PORTSETS"); do
               for proto in icmp tcp udp; do
 	        json_add_object ""
@@ -153,7 +165,26 @@ proto_map_setup() {
 	        json_close_object
               done
 	    done
+	    if [ "$type" = "map-e" ]; then
+		    for portset in $(eval "echo \$RULE_${k}_PORTSETS"); do
+			    json_add_object ""
+			    json_add_string type rule
+			    json_add_string family inet
+			    json_add_string set_mark 0x100
+			    json_add_string dest_ip $(eval "echo \$RULE_${k}_IPV4ADDR")
+			    json_add_string proto tcpudp
+			    json_add_string src "lan"
+			    json_add_string device "$ifname"
+			    json_add_string dest_port "$portset"
+			    json_add_string target MARK
+			    json_close_object
+		    done
+		    ip rule add to $(eval "echo \$RULE_${k}_IPV4ADDR") iif $ifname fwmark 0x100/0x100 table local
+		    ip rule add to $(eval "echo \$RULE_${k}_IPV4ADDR") iif $ifname table main
+	    fi
 	  fi
+	  fi
+
 	  if [ "$maptype" = "map-t" ]; then
 		[ -z "$zone" ] && zone=$(fw3 -q network $iface 2>/dev/null)
 
@@ -168,35 +199,23 @@ proto_map_setup() {
 				json_add_string src_ip $(eval "echo \$RULE_${k}_IPV6ADDR")
 				json_add_string target ACCEPT
 			json_close_object
-			json_add_object ""
-				json_add_string type rule
-				json_add_string family inet6
-				json_add_string proto all
-				json_add_string direction out
-				json_add_string dest "$zone"
-				json_add_string src "$zone"
-				json_add_string dest_ip $(eval "echo \$RULE_${k}_IPV6ADDR")
-				json_add_string target ACCEPT
-			json_close_object
 		}
 		proto_add_ipv6_route $(eval "echo \$RULE_${k}_IPV6ADDR") 128
+
 	  fi
+
+	if [ "$maptype" = "lw4o6" -o "$maptype" = "map-e" ]; then
+		if [ "$mode" = br ]; then
+			proto_add_ipv6_address "$(eval "echo \$RULE_${k}_BR")" "128"
+		else
+			proto_add_ipv6_address "$(eval "echo \$RULE_${k}_IPV6ADDR")" "128"
+		fi
+	  fi
+
 	json_close_array
 	proto_close_data
 
 	proto_send_update "$cfg"
-
-	if [ "$maptype" = "lw4o6" -o "$maptype" = "map-e" ]; then
-		json_init
-		json_add_string name "${cfg}_"
-		json_add_string ifname "@$(eval "echo \$RULE_${k}_PD6IFACE")"
-		json_add_string proto "static"
-		json_add_array ip6addr
-		json_add_string "" "$(eval "echo \$RULE_${k}_IPV6ADDR")"
-		json_close_array
-		json_close_object
-		ubus call network add_dynamic "$(json_dump)"
-	fi
 }
 
 proto_map_teardown() {
@@ -209,7 +228,6 @@ proto_map_teardown() {
 	[ -z "$maptype" ] && maptype="map-e"
 
 	case "$maptype" in
-		"map-e"|"lw4o6") ifdown "${cfg}_" ;;
 		"map-t") [ -f "/proc/net/nat46/control" ] && echo del $link > /proc/net/nat46/control ;;
 	esac
 
@@ -221,7 +239,7 @@ proto_map_init_config() {
 	available=1
 
 	proto_config_add_string "maptype"
-	proto_config_add_string "rule"
+	config_add_array 'rule'
 	proto_config_add_string "ipaddr"
 	proto_config_add_int "ip4prefixlen"
 	proto_config_add_string "ip6prefix"
@@ -238,6 +256,8 @@ proto_map_init_config() {
 	proto_config_add_int "ttl"
 	proto_config_add_string "zone"
 	proto_config_add_string "encaplimit"
+        proto_config_add_string "mode"
+	proto_config_add_int "fmr"
 }
 
 [ -n "$INCLUDE_ONLY" ] || {

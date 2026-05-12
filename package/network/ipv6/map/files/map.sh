@@ -27,7 +27,7 @@ proto_map_setup() {
 
 	local maptype type legacymap mtu ttl tunlink zone encaplimit
 	local rule ipaddr ip4prefixlen ip6prefix ip6prefixlen peeraddr ealen psidlen psid offset mode fmr
-	json_get_vars maptype type legacymap mtu ttl tunlink zone fmr mode encaplimit
+	json_get_vars maptype type legacymap mtu ttl tunlink zone fmr mode encaplimit draft03
 	json_get_vars ipaddr ip4prefixlen ip6prefix ip6prefixlen peeraddr ealen psidlen psid offset
 	json_get_values rule rule
 
@@ -54,7 +54,7 @@ proto_map_setup() {
 		if [ "$maptype" = "map-t" ]; then
 			rule="$rule,dmr=$peeraddr"
 		else
-			rule="$rule,br=$peeraddr"
+			rule="$rule,br=$peeraddr,draft03=${draft03:0}"
 			[ $fmr = 1 ] && rule="$rule,fmr=1"
 		fi
 	fi
@@ -96,6 +96,8 @@ proto_map_setup() {
 		json_add_string link $(eval "echo \$RULE_${k}_PD6IFACE")
 		json_add_object "data"
 			[ -n "$encaplimit" ] && json_add_string encaplimit "$encaplimit"
+			# In Openwrt 19.07, draft03 field is inside "data", so draft03 should be added here.
+			json_add_int draft03 "${draft03:0}"
 			if [ "$maptype" = "map-e" ]; then
 				json_add_array "fmrs"
 				for i in $(seq $RULE_COUNT); do
@@ -179,6 +181,9 @@ proto_map_setup() {
 			    json_add_string target MARK
 			    json_close_object
 		    done
+		    echo $(eval "echo \$RULE_${k}_PSID") > /sys/module/nf_nat_ftp/parameters/psid
+		    echo $(eval "echo \$RULE_${k}_PSIDLEN") > /sys/module/nf_nat_ftp/parameters/psid_len
+		    echo $(eval "echo \$RULE_${k}_OFFSET") > /sys/module/nf_nat_ftp/parameters/offset
 		    ip rule add to $(eval "echo \$RULE_${k}_IPV4ADDR") iif $ifname fwmark 0x100/0x100 table local
 		    ip rule add to $(eval "echo \$RULE_${k}_IPV4ADDR") iif $ifname table main
 	    fi
@@ -228,6 +233,11 @@ proto_map_teardown() {
 	[ -z "$maptype" ] && maptype="map-e"
 
 	case "$maptype" in
+		"map-e") {
+			echo 0 > /sys/module/nf_nat_ftp/parameters/psid
+			echo 0 > /sys/module/nf_nat_ftp/parameters/psid_len
+			echo 0 > /sys/module/nf_nat_ftp/parameters/offset
+		};;
 		"map-t") [ -f "/proc/net/nat46/control" ] && echo del $link > /proc/net/nat46/control ;;
 	esac
 
@@ -258,6 +268,7 @@ proto_map_init_config() {
 	proto_config_add_string "encaplimit"
         proto_config_add_string "mode"
 	proto_config_add_int "fmr"
+	proto_config_add_int "draft03"
 }
 
 [ -n "$INCLUDE_ONLY" ] || {

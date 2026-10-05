@@ -21,6 +21,17 @@ apply_defaults() {
 
 	sysctl -qw vm.min_free_kbytes="$min_free"
 
+	soc_id=$(cat /sys/devices/soc0/soc_id 2>/dev/null)
+	case "$soc_id" in
+		556) # sdxpinn
+		sysctl -qw vm.watermark_boost_factor=0
+		;;
+	"")   # Empty
+		;;
+	*)    # other soc
+		;;
+	esac
+
 	[ "$frag_low_thresh" ] && sysctl -qw \
 		net.ipv4.ipfrag_low_thresh="$frag_low_thresh" \
 		net.ipv4.ipfrag_high_thresh="$frag_high_thresh" \
